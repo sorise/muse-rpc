@@ -46,8 +46,6 @@ TEST_CASE("normal - run", "[ConcurrentThreadPool]"){
 
         pool.commit_executor(token1);
 
-        std::this_thread::sleep_for(1600ms);
-
         for (int i = 4001; i < 4101; ) {
             auto token1 = make_executor([&](int i)->void{
                 std::this_thread::sleep_for( std::chrono::milliseconds(5));
@@ -55,7 +53,6 @@ TEST_CASE("normal - run", "[ConcurrentThreadPool]"){
             }, i);
             auto result = pool.commit_executor(token1);
             if (!result.isSuccess){
-                std::this_thread::sleep_for( std::chrono::milliseconds(5));
             }else{
                 i++;
             }

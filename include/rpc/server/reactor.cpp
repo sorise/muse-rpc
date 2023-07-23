@@ -6,41 +6,61 @@
 
 namespace muse::rpc{
 
+    std::shared_ptr<std::pmr::synchronized_pool_resource> getMemoryPool(size_t _largest_required_pool_block, size_t _max_blocks_per_chunk){
+        try {
+            std::pmr::pool_options option;
+            option.largest_required_pool_block = _largest_required_pool_block; //5M
+            option.max_blocks_per_chunk = _max_blocks_per_chunk; //每一个chunk有多少个block
+            return std::make_shared<std::pmr::synchronized_pool_resource>(option);
+        }catch (const std::exception &ex){
+            SPDLOG_ERROR("memory pool create error, what(): {}", ex.what() );
+            throw ReactorException("[getMemoryPool]", ReactorError::MemoryPoolCreateFailed);
+        }
+    }
+
     /* 构造函数 */
-    Reactor::Reactor(short _port, ReactorRuntimeThread _type, int _maxConnection):
-    port(_port), type(_type), openMaxConnection(_maxConnection), epollFd(-1), runner(nullptr),socketFd(-1){}
+    Reactor::Reactor(uint16_t _port,uint32_t _sub_reactor_count,uint32_t _open_max_connection, ReactorRuntimeThread _type):
+    port(_port),
+    type(_type),
+    epollFd(-1),
+    openMaxConnection(_open_max_connection),
+    subReactorCount(_sub_reactor_count),
+    runner(nullptr),
+    counter(0), //负载均衡策略
+    socketFd(-1){
+        pool = getMemoryPool(1024*1024 * 5, 2048);
+    }
 
     /* 析构函数 */
     Reactor::~Reactor() {
+        runState.store(false, std::memory_order_release);
         if (runner != nullptr){
             if (runner->joinable()) runner->join();
         }
         if (epollFd != -1) close(epollFd);
         if (socketFd != -1) close(socketFd);
-        SPDLOG_INFO("Reactor end life!");
+        epollFd = -1;
+        socketFd = -1;
+        SPDLOG_INFO("Main-Reactor end life!");
     }
 
-    bool Reactor::loop() {
+    void Reactor::loop() {
         //创建 epoll
         if ((epollFd = epoll_create(128)) == -1){
-            return false;
+            SPDLOG_ERROR("Main-Reactor loop function epoll fd create failed, errno {}", port, errno);
+            throw ReactorException("[Main-Reactor]", ReactorError::EpollFdCreateFailed);
         }
         //创建服务器 socket
         if( (socketFd = socket(PF_INET, SOCK_DGRAM | SOCK_NONBLOCK,IPPROTO_UDP)) == -1 ){
-            return false;
+            SPDLOG_ERROR("Main-Reactor loop function socket fd create failed, errno {}", port, errno);
+            throw ReactorException("[Main-Reactor]", ReactorError::SocketFdCreateFailed);
         }
         //服务器地址
         sockaddr_in serverAddress{
-                AF_INET,
+                PF_INET,
                 htons(port),
                 htonl(INADDR_ANY)
         };
-
-        //绑定端口号 和 IP
-        if(bind(socketFd, (const struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1){
-            SPDLOG_ERROR("socket bind port {} error, errno {}", port, errno);
-            return false;
-        }
 
         int on = 1;
         //地址复用 端口复用
@@ -48,68 +68,83 @@ namespace muse::rpc{
         //地址复用 端口复用
         setsockopt(socketFd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
 
+        //绑定端口号 和 IP
+        if(bind(socketFd, (const struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1){
+            SPDLOG_ERROR("socket bind port {} error, errno {}", port, errno);
+            throw ReactorException("[Main-Reactor]", ReactorError::SocketBindFailed);
+        }
+
         uint32_t events = EPOLLIN | EPOLLERR | EPOLLHUP| EPOLLRDHUP;
 
         struct epoll_event ReactorEpollEvent{events, {.fd = socketFd} };
 
         if( epoll_ctl(epollFd, EPOLL_CTL_ADD, socketFd, &ReactorEpollEvent) == -1 ){
-            SPDLOG_ERROR("Epoll Operation EPOLL_CTL_ADD failed in Line!");
             close(epollFd); //关闭epoll
             close(socketFd); //关闭 socket
             epollFd = -1;
             socketFd = -1;
-            return false;
+            SPDLOG_ERROR("Epoll Operation EPOLL_CTL_ADD failed in Line!");
+            throw ReactorException("[Main-Reactor]", ReactorError::EpollEPOLL_CTL_ADDFailed);
         }
-        struct epoll_event epollQueue[openMaxConnection];
+        struct epoll_event epollQueue[10]; //啥用也没有！！
         //启动
         runState.store(true, std::memory_order_release);
-        //产生一个缓冲区
-        constexpr unsigned int bufferSize = Protocol::defaultPieceLimitSize + 1;
-        char recvBuf[bufferSize] = { '\0' };
+        //启动从引擎
+        startSubReactor(); //失败直接抛出异常
         //开始循环
         while (runState.load(std::memory_order_relaxed)){
             //处于阻塞状态
-            auto readyCount = epoll_wait(epollFd, epollQueue,openMaxConnection , -1);
+            auto readyCount = epoll_wait(epollFd, epollQueue,10 , 10);
             for (int i = 0; i < readyCount; ++i) {
                 if (epollQueue[i].events & EPOLLERR){
                     SPDLOG_ERROR("epoll epollQueue errno: {}", errno);
-                    throw std::runtime_error("exit"); //停掉服务直接退出
                 }
                 else if (epollQueue[i].events & EPOLLHUP){
                     SPDLOG_ERROR("epoll event EPOLLHUP Event errno: {}", errno);
-                    throw std::runtime_error("exit"); //停掉服务直接退出
                 }
                 else if (epollQueue[i].events & EPOLLRDHUP){
                     SPDLOG_ERROR("epoll event EPOLLRDHUP Event errno: {}", errno);
-                    throw std::runtime_error("exit"); //停掉服务直接退出
                 }else{
+                    //产生一个缓冲区
+                    constexpr unsigned int bufferSize = Protocol::FullPieceSize + 1;
+                    void * dp = pool->allocate(bufferSize);
+                    std::shared_ptr<char[]> dt((char*)dp, [&](char *ptr){
+                        pool->deallocate(ptr, Protocol::FullPieceSize + 1);
+                    });
                     //收到新链接
                     sockaddr_in addr{};
                     socklen_t len = sizeof(addr);
                     //读取数据
-                    auto recvLen = recvfrom(epollQueue[i].data.fd, recvBuf, bufferSize, 0 ,(struct sockaddr*)&addr, &len);
+                    auto recvLen = recvfrom(epollQueue[i].data.fd, dp, bufferSize, 0 ,(struct sockaddr*)&addr, &len);
                     SPDLOG_INFO("Main-Reactor receive new udp connection from ip {} port {}" ,inet_ntoa(addr.sin_addr)  ,ntohs(addr.sin_port));
-                    if (recvLen > 0){
-                        bool isSuccess = false;
-                        auto header = Protocol::parse(recvBuf, recvLen, isSuccess);
-                        if (isSuccess){
-                            //读取成功 上交报文，建立链接
+                    //不需要解析内容，只需要丢给 sub-reactor
 
+                    int sonSocketFd = -1;
+                    if ((sonSocketFd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+                        SPDLOG_WARN("Main-Reactor create connect udp socket failed， errno: {}", errno);
+                    } else {
+                        //地址、端口复用 端口复用
+                        setsockopt(sonSocketFd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+                        setsockopt(sonSocketFd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
 
-
-
-                        }else{
-                            //协议格式不正确
-                           std::string message {"Please use the correct network protocol！\n"};
-                           sendto(socketFd, message.c_str() , sizeof(char)*message.size(),0, (struct sockaddr*)&addr, len);
+                        //绑定端口号 和 IP
+                        if(bind(sonSocketFd, (const struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1){
+                            SPDLOG_ERROR("son socket bind port {} failed, errno {}", port, errno);
                         }
-                    }else{
-                        SPDLOG_WARN("main Reactor receive 0 bytes data from ip {} port {} errno {}" ,inet_ntoa(addr.sin_addr)  ,ntohs(addr.sin_port), errno);
+                        // addr 是 客户端地址
+                        if (connect(sonSocketFd, (struct sockaddr *) &addr, sizeof(struct sockaddr)) == -1) {
+                            SPDLOG_ERROR("son socket connect ip {} port {} failed, errno {}",inet_ntoa(addr.sin_addr), ntohs(port), errno);
+                        } else {
+                            //成功链接，丢给 从反应堆
+                            size_t idx = counter % subReactorCount;
+                            counter++;
+                            SPDLOG_INFO("Main-Reactor send connection to {} sub reactor",idx);
+                            subs[idx]->acceptConnection(sonSocketFd, recvLen, addr, dt);
+                        }
                     }
                 }
             }
         }
-        return true;
     }
 
     void Reactor::stop() noexcept {
@@ -119,14 +154,33 @@ namespace muse::rpc{
         }
     }
 
-    bool Reactor::start() noexcept {
-        if (type == ReactorRuntimeThread::Synchronous){
-            SPDLOG_INFO("Reactor server start to run in port {} connection limit {} and run type Synchronous", port, openMaxConnection);
-            return loop();
-        }else{
-            SPDLOG_INFO("Reactor server start to run in port {} connection limit {} and run type Asynchronous", port, openMaxConnection);
-            runner = std::make_shared<std::thread>(&Reactor::loop, this);
+    void Reactor::start(){
+        //首先创建 sub_reactor
+        try {
+            for (int i = 0; i < subReactorCount; ++i) {
+                subs.emplace_back(std::make_unique<SubReactor>(port, openMaxConnection, pool));
+            }
+        }catch(std::exception &exp){
+            SPDLOG_ERROR("Main-Reactor create sub reactor failed, memory not enough, exception what:{}!", exp.what());
+            throw ReactorException("[Main-Reactor]", ReactorError::CreateSubReactorFailed);
         }
-        return false;
+        //启动主引擎
+        SPDLOG_INFO("Reactor server start to run in port {} connection limit {} and run type Synchronous", port, openMaxConnection);
+        if (type == ReactorRuntimeThread::Synchronous){
+            loop();
+        }else{
+            try {
+                runner = std::make_shared<std::thread>(&Reactor::loop, this);
+            }catch(std::exception &exp){
+                throw ReactorException("[Main-Reactor]", ReactorError::CreateMainReactorThreadFailed);
+            }
+        }
+    }
+    void Reactor::startSubReactor() {
+        for (int i = 0; i < subReactorCount; ++i) {
+            if (subs[i] != nullptr){
+                subs[i]->start();
+            }
+        }
     }
 }

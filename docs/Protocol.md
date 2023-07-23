@@ -1,18 +1,67 @@
+### [Simple Request-Response Protocol](#)
+**介绍**：简单请求响应协议，SR2P 协议！
+
+----
+协议可视化内容
+
+<img src="./assets/protocol.jpg" width="1000px" >
+
+
 ```cpp
  ProtocolHeader{
-    // 六 字节
+    // 八 字节
     uint8_t synchronousWord;          // 1 同步字  全1111 0000
     uint8_t versionAndType;           // 1 协议版本 和 类型
     uint16_t pieceOrder;              // 2 序号
-    uint16_t pieceSize;               // 2 当前分片多少个字节数
+    uint16_t pieceSize;               // 2 当前分片多少个字节数，数据部分的大小
+    uint16_t acceptMinOrder;          // 2 已被确认序号
     // 八 字节
     uint64_t timePoint;               // 8 区分不同的包 报文 ID
     // 八 字节
-    uint16_t totalCount;                   // 2 总共有多少个包
+    uint16_t totalCount;              // 2 总共有多少个包
     uint16_t pieceStandardSize ;      // 2 标准大小
     uint32_t totalSize;               // 4 UDP完整报文的大小
-    // 四 字节
-    uint16_t acceptMinOrder;          // 2 已被确认序号
+    // 二 字节
     uint16_t acceptOrder;             // 2 确认序号
 };
 ```
+
+```cpp
+enum class ProtocolType:unsigned char{
+    RequestSend = 0,                    // 纯数据报文
+    ReceiverACK = 2,                    // 接收方确认数据
+    RequestACK = 3,                     // 确认 ACK  关心阶段
+    TimedOutRequestHeartbeat = 4,       // 心跳请求  表示当前的报文生命周期还在吗
+    TimedOutResponseHeartbeat = 5,      // 心跳响应  表示正在处理
+    UnsupportedNetworkProtocol = 6,     // 网络数据格式不正确 只会服务器发送
+    StateReset = 7,                     // 链接已经重置了
+    TheServerResourcesExhausted = 8,    // 服务器资源已经耗尽, 只会服务器发送
+};
+
+enum class CommunicationPhase:uint8_t {
+    Request = 0,
+    Response = 1
+};
+```
+
+
+Request阶段：**client 向 server 发送请求数据**
+
+| 阶段      | client(发送方)              | server(接收方)                 |
+|:---------|:-------------------------|:----------------------------|
+| Request  | RequestSend              | ReceiverACK                 |
+|          | RequestACK               | ReceiverACK                 |
+|          | TimedOutRequestHeartbeat | TimedOutResponseHeartbeat   |
+|          | 正常数据                     | TheServerResourcesExhausted |
+|          | 非法数据                     | UnsupportedNetworkProtocol  |
+|          | 超时重置                     | StateReset                  |
+
+Response阶段：**server 向 client 发送响应数据**
+
+| 阶段      | server(发送方)             | client(接收方)             |
+|:---------|:--------------------------|:--------------------------|
+| Response | RequestSend               | ReceiverACK               |
+|          | RequestACK                | ReceiverACK               |
+|          | TimedOutRequestHeartbeat  | TimedOutResponseHeartbeat |
+|          | TimedOutResponseHeartbeat | TimedOutRequestHeartbeat  |
+|          | 发送完毕                      | StateReset                |

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 
-project(muse
+project(muse-rpc
         VERSION         0.0.1
         DESCRIPTION     "A Simple RPC Application Framework Based on Connection UDP"
         HOMEPAGE_URL    "https://github.com/muse"
@@ -18,9 +18,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED  ON)
 
 add_library(rpc SHARED
-        ${CMAKE_SOURCE_DIR}/include/rpc/protocol/conf.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/protocol/protocol.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/reactor.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/request.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/sub_reactor.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/reactor_exception.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/client/response_data.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/client/invoker.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/client/invoker_exception.cpp
 )
+
+target_link_libraries(rpc PUBLIC serializer)
 
 #查找需要的库在不在
 find_library(Zlib_Find_Result z
@@ -39,14 +47,12 @@ add_executable(muse main.cpp)
 add_executable(client client.cpp)
 
 target_link_libraries(muse
-        PUBLIC serializer
         PUBLIC z
         PUBLIC rpc
 )
 
 
 target_link_libraries(client
-        PUBLIC serializer
         PUBLIC rpc
 )
 

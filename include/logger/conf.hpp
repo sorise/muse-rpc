@@ -27,7 +27,6 @@ namespace muse::logger{
             auto rotating = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
                     "muse.log", 1024 * 1024 * 512, 3, false
             );
-
             //输出到控制台
             auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
             sinks.push_back(rotating);
@@ -41,7 +40,7 @@ namespace muse::logger{
                             spdlog::async_overflow_policy::block
                     );
             //设置日志格式
-            logger->set_pattern("[%Y-%m-%d %H:%M:%S] %^[%n] [%l] [%s:%#]%$ [thread:%t] %v");
+            logger->set_pattern("[%Y-%m-%d %H:%M:%S] %^[%n] [%l] [thread:%t] [%s:%#]%$  %v");
             //立即刷新
             logger->flush_on(spdlog::level::err);
             //全局注册

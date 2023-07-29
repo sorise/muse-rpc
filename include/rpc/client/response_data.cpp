@@ -24,6 +24,19 @@ namespace muse::rpc{
         return ResponseData(pool);
     }
 
+    ResponseDataFactory::ResponseDataFactory(ResponseDataFactory &&other) noexcept
+    :pool(std::move(other.pool))
+    {
+
+    }
+
+    ResponseDataFactory::ResponseDataFactory(const ResponseDataFactory &other) noexcept {
+        this->pool = other.pool;
+    }
+
+    bool ResponseData::isOk() const { return this->isSuccess;};
+    uint32_t ResponseData::getSize() const {return this->total_size;};
+    FailureReason ResponseData::getFailureReason() const { return this->reason;};
 
     ResponseData::ResponseData(std::shared_ptr<std::pmr::synchronized_pool_resource> _pool)
     : pool(std::move(_pool)), piece_state(0),message_id(0),total_size(0), piece_count(0){
@@ -39,7 +52,31 @@ namespace muse::rpc{
             this->piece_count = _piece_count;
             this->total_size =_total_size;
 
+            auto store = pool->allocate(_total_size);
+            std::shared_ptr<char[]> dt((char*)store, [&, total=_total_size](char *ptr){
+                pool->deallocate(ptr, total);
+            });
+            data = dt;
             is_initial = true;
+        }
+    }
+
+    uint16_t ResponseData::setPieceState(const uint16_t & _index, bool value) {
+        if (_index > piece_count) {
+            SPDLOG_ERROR("Class Request getPieceState index Cross boundary error!, @_index {} vector size {}", _index, piece_state.size());
+            throw InvokerException("[Request]", InvokerError::PieceStateIncorrect);
+        }else{
+            piece_state[_index] = value;
+            return getAckNumber();
+        }
+    }
+
+    bool ResponseData::getPieceState(const uint16_t & _index) const {
+        if (_index > piece_count) {
+            SPDLOG_ERROR("Class Request getPieceState index Cross boundary error!, @_index {} vector size {}", _index, piece_state.size());
+            throw InvokerException("[Request]", InvokerError::PieceStateIncorrect);
+        }else{
+            return piece_state[_index];
         }
     }
 
@@ -51,6 +88,17 @@ namespace muse::rpc{
     ResponseData::ResponseData(ResponseData &&other) noexcept
     :pool(std::move(other.pool)), piece_state(std::move(other.piece_state)),message_id(other.message_id),total_size(other.total_size), piece_count(other.piece_count){
         is_initial = other.is_initial;
+    }
+
+    uint16_t ResponseData::getAckNumber() {
+        uint16_t result = piece_state.size();
+        for (int i = 0; i < piece_state.size(); ++i) {
+            if (!piece_state[i]){
+                result = i;
+                break;
+            }
+        }
+        return result;
     }
 
 }

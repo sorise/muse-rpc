@@ -2,6 +2,9 @@
 **介绍**：简单请求响应协议，SR2P 协议！
 
 ----
+
+
+### [一、协议字段及其意义](#)
 协议可视化内容
 
 <img src="./assets/protocol.jpg" width="1000px" >
@@ -14,7 +17,7 @@
     uint8_t versionAndType;           // 1 协议版本 和 类型
     uint16_t pieceOrder;              // 2 序号
     uint16_t pieceSize;               // 2 当前分片多少个字节数，数据部分的大小
-    uint16_t acceptMinOrder;          // 2 已被确认序号
+    uint16_t acceptMinOrder;          // 2 发送数据端希望收到的确认号
     // 八 字节
     uint64_t timePoint;               // 8 区分不同的包 报文 ID
     // 八 字节
@@ -28,14 +31,15 @@
 
 ```cpp
 enum class ProtocolType:unsigned char{
-    RequestSend = 0,                    // 纯数据报文
-    ReceiverACK = 2,                    // 接收方确认数据
-    RequestACK = 3,                     // 确认 ACK  关心阶段
-    TimedOutRequestHeartbeat = 4,       // 心跳请求  表示当前的报文生命周期还在吗
-    TimedOutResponseHeartbeat = 5,      // 心跳响应  表示正在处理
-    UnsupportedNetworkProtocol = 6,     // 网络数据格式不正确 只会服务器发送
-    StateReset = 7,                     // 链接已经重置了
-    TheServerResourcesExhausted = 8,    // 服务器资源已经耗尽, 只会服务器发送
+    RequestSend = 0,                    // 纯数据报文 totalSize 是真实数据大小
+    ReceiverACK = 2,                    // 接收方确认数据  totalSize = 0
+    RequestACK = 3,                     // 确认 ACK  关心阶段 totalSize = 0
+    TimedOutRequestHeartbeat = 4,       // 心跳请求  表示当前的报文生命周期还在吗 totalSize = 0
+    TimedOutResponseHeartbeat = 5,      // 心跳响应  表示正在处理 totalSize = 0
+    UnsupportedNetworkProtocol = 6,     // 网络数据格式不正确 只会服务器发送 totalSize = 0
+    StateReset = 7,                     // 链接已经重置了,或者服务器没有这个链接 totalSize = 0
+    TheServerResourcesExhausted = 8,    // 服务器资源已经耗尽, 只会服务器发送 totalSize = 0
+    Terminate = 9,                      // 响应结束 ？？？  totalSize = 0
 };
 
 enum class CommunicationPhase:uint8_t {
@@ -65,3 +69,5 @@ Response阶段：**server 向 client 发送响应数据**
 |          | TimedOutRequestHeartbeat  | TimedOutResponseHeartbeat |
 |          | TimedOutResponseHeartbeat | TimedOutRequestHeartbeat  |
 |          | 发送完毕                      | StateReset                |
+
+### [2. 交互过程](#)

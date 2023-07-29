@@ -45,14 +45,14 @@ namespace muse::rpc{
     }
 
     uint32_t Request::getTotalDataSize() const {
-        return 0;
+        return this->total_data_size;
     }
 
     uint16_t Request::getPieceCount() const {
         return piece_count;
     }
 
-    bool Request::getPieceState(const uint32_t & _index) const {
+    bool Request::getPieceState(const uint16_t & _index) const {
         if (_index > piece_count) {
             SPDLOG_ERROR("Class Request getPieceState index Cross boundary error!, @_index {} vector size {}", _index, piece_state.size());
             throw ReactorException("[Request]", ReactorError::PieceStateOutBound);
@@ -65,11 +65,11 @@ namespace muse::rpc{
         socketFd = _socket_fd;
     }
 
-    int Request::getSocket() {
+    int Request::getSocket() const {
         return socketFd;
     }
 
-    uint16_t Request::setPieceState(const uint32_t & _index, bool value) {
+    uint16_t Request::setPieceState(const uint16_t & _index, bool value) {
         if (_index > piece_count) {
             SPDLOG_ERROR("Class Request getPieceState index Cross boundary error!, @_index {} vector size {}", _index, piece_state.size());
             throw ReactorException("[Request]", ReactorError::PieceStateOutBound);
@@ -88,6 +88,14 @@ namespace muse::rpc{
             }
         }
         return result;
+    }
+
+    bool Request::getTriggerState() const {
+        return is_trigger;
+    }
+
+    void Request::trigger() {
+        is_trigger = true;
     }
 }
 

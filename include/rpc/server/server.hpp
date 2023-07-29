@@ -5,5 +5,9 @@
 #ifndef MUSE_SERVER_HPP
 #define MUSE_SERVER_HPP
 
+namespace muse::rpc{
+
+}
+
 
 #endif //MUSE_SERVER_HPP

@@ -8,10 +8,10 @@ namespace muse::serializer{
     class IBinarySerializable;
 /* 进行反序列合法性检测 */
 #define MUSE_CHECK_LEGITIMACY(TYPENAME, realName)                            \
-    auto needLength = sizeof(BinaryDataType::TYPENAME) + sizeof(realName );         \
-    if((byteStream.size() - readPosition) < needLength )                            \
+    auto needLength = sizeof(BinaryDataType::TYPENAME) + sizeof(realName );        \
+    if((byteStream.size() - readPosition) < needLength )                     \
         throw BinarySerializerException("remaining memory is not enough ", ErrorNumber::InsufficientRemainingMemory); \
-                                                                                          \
+                                                                                    \
     if (byteStream[readPosition] != (char)BinaryDataType::TYPENAME)                       \
         throw BinarySerializerException("read type error", ErrorNumber::DataTypeError);   \
 
@@ -236,6 +236,10 @@ namespace muse::serializer{
         return *this;
     }
 
+    BinarySerializer& BinarySerializer::input(const std::tuple<> & tpl){
+        return *this;
+    }
+
     BinarySerializer& BinarySerializer::output(bool & value) {
         MUSE_CHECK_LEGITIMACY(BOOL,bool)
         value = (bool)byteStream[++readPosition];
@@ -435,6 +439,10 @@ namespace muse::serializer{
         }
         std::memcpy(value,(char*)&byteStream[readPosition], stringLength);
         readPosition += static_cast<int>(stringLength);
+        return *this;
+    }
+
+    BinarySerializer& BinarySerializer::output(std::tuple<> & tpl){
         return *this;
     }
 

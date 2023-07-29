@@ -9,4 +9,32 @@
 #### 问题 2 要不要建立一个发送缓存区！
 当然需要，那么发送缓存区由什么对象来管理，怎么使用？？？客户端应该是工厂模式，还是家庭作坊模式？？？
 
-#### 一个线程一个内存池?
+#### 问题 3 一个线程一个内存池?
+还是一个程序一个内存池
+
+#### 问题 4 函数指针能赋值给万能引用？
+为啥不能自动类型推断
+```c++
+template<typename F>
+void Bind(const std::string& name, F&& func){
+    dictionary[name] = std::bind(&Registry::Proxy<F>, 
+            this, std::forward<F>(func), std::placeholders::_1);
+}
+
+int test_fun1(int value){
+    int i  = 10;
+    return i + value;
+}
+
+int main() {
+    Bind("run", test_fun1); //失败 ，是不行的
+}
+```
+
+#### 问题 5 如何保证成员函数调用的线程安全性,数据竞争问题
+[SpringMVC：如何保证Controller的并发安全？](https://blog.csdn.net/u012811805/article/details/130787882)
+ 
+* 尽量不要在 Controller 中定义成员变量；
+* 如果必须要定义一个非静态成员变量，那么可以通过注解 @Scope(“prototype”) 将Controller设置为多例模式。
+* Controller 中使用 ThreadLocal 变量。每一个线程都有一个变量的副本。
+* Spring本身并没有解决并发访问的问题。

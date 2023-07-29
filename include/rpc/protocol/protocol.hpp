@@ -25,7 +25,7 @@ namespace muse::rpc{
         ProtocolType type;                // 1 协议类型
         uint16_t pieceOrder;              // 2 序号
         uint16_t pieceSize;               // 2 当前分片的数据部分有多少个字节
-        uint16_t acceptMinOrder;          // 2 已经收到的确认序号
+        uint16_t acceptMinOrder;          // 2 发送数据端希望收到的确认号
         // 八 字节
         uint64_t timePoint;               // 8 区分不同的包 报文 ID
         // 八 字节
@@ -72,6 +72,8 @@ namespace muse::rpc{
         void setAcceptMinOrder(char *protocol, const uint16_t& _accept_order);
 
         uint16_t getAcceptMinOrder(char *protocol);
+
+        static int getSendCount(const uint16_t& piece_count);
 
         ~Protocol() = default;
     };

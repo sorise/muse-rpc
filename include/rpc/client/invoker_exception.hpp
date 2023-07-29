@@ -15,6 +15,7 @@ namespace muse::rpc{
         CreateSocketError,                   //创建
         SocketFDError,                       //socket 是错误的
         ServerNotSupportTheProtocol,         //服务器地址错误，请求地址不支持当前协议
+        PieceStateIncorrect,                 //状态设置错误
     };
 
     /* 错误异常消息 */

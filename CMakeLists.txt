@@ -17,18 +17,41 @@ add_subdirectory(src)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED  ON)
 
+add_library(timer SHARED
+        ${CMAKE_SOURCE_DIR}/include/timer/timer_wheel.cpp
+        ${CMAKE_SOURCE_DIR}/include/timer/timer_tree.cpp
+)
+
+add_library(threads SHARED
+        ${CMAKE_SOURCE_DIR}/include/thread_pool/executor.cpp
+        ${CMAKE_SOURCE_DIR}/include/thread_pool/conf.cpp
+        ${CMAKE_SOURCE_DIR}/include/thread_pool/pool.cpp
+        ${CMAKE_SOURCE_DIR}/include/thread_pool/concurrent_pool.cpp
+)
+
 add_library(rpc SHARED
         ${CMAKE_SOURCE_DIR}/include/rpc/protocol/protocol.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/reactor.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/request.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/sub_reactor.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/reactor_exception.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/reactor_pool.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/response.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/registry.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/rpc_response_header.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/middleware_channel.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/route_service.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/concurrent_registry.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/response_data.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/invoker.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/client/client.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/invoker_exception.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/memory/conf.cpp
 )
 
-target_link_libraries(rpc PUBLIC serializer)
+target_link_libraries(rpc
+        PUBLIC serializer threads timer
+)
 
 #查找需要的库在不在
 find_library(Zlib_Find_Result z
@@ -42,18 +65,19 @@ else ()
     MESSAGE(FATAL_ERROR "-- didn't find zlib ----- ERROR!")
 endif ()
 
-
 add_executable(muse main.cpp)
 add_executable(client client.cpp)
+add_executable(call bind.cpp)
 
 target_link_libraries(muse
         PUBLIC z
         PUBLIC rpc
 )
 
+target_link_libraries(call PUBLIC serializer)
 
 target_link_libraries(client
-        PUBLIC rpc
+    PUBLIC rpc
 )
 
 # 启动单元测试

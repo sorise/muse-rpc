@@ -28,7 +28,7 @@ namespace muse::rpc{
     runner(nullptr),
     counter(0), //负载均衡策略
     socketFd(-1){
-        pool = getMemoryPool(1024*1024 * 5, 2048);
+        pool = MemoryPoolSingleton();
     }
 
     /* 析构函数 */
@@ -139,7 +139,11 @@ namespace muse::rpc{
                             size_t idx = counter % subReactorCount;
                             counter++;
                             SPDLOG_INFO("Main-Reactor send connection to {} sub reactor",idx);
-                            subs[idx]->acceptConnection(sonSocketFd, recvLen, addr, dt);
+                            auto result = subs[idx]->acceptConnection(sonSocketFd, recvLen, addr, dt);
+                            if (!result){
+                                SPDLOG_WARN("Sub Reactor has been stopped!");
+                                close(sonSocketFd);
+                            }
                         }
                     }
                 }

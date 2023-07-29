@@ -15,7 +15,7 @@
 #define LOGGER_NAME "museLogger"
 #define MUSE_LOG spdlog::get("museLogger")
 
-namespace muse::logger{
+namespace muse::rpc{
     static void InitSystemLogger(){
         //开启日志
         try
@@ -40,7 +40,7 @@ namespace muse::logger{
                             spdlog::async_overflow_policy::block
                     );
             //设置日志格式
-            logger->set_pattern("[%Y-%m-%d %H:%M:%S] %^[%n] [%l] [thread:%t] [%s:%#]%$  %v");
+            logger->set_pattern("[%Y-%m-%d %H:%M:%S %e] %^[%n] [%l] [thread:%t] [%s:%#]%$  %v");
             //立即刷新
             logger->flush_on(spdlog::level::err);
             //全局注册

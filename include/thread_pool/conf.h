@@ -32,11 +32,7 @@ namespace muse::pool{
         std::shared_ptr<std::thread> workman {nullptr};
     };
 
-    static std::chrono::milliseconds GetTick(){
-        std::chrono::time_point<std::chrono::system_clock> tp =
-                std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
-        return std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
-    }
+    std::chrono::milliseconds GetTick();
 
     /* 并发线程池的工作线程状态信息 */
     struct ConcurrentWorker{
@@ -48,7 +44,6 @@ namespace muse::pool{
         //上次循环是否在执行任务
         bool lastRunHaveTask {true};
     };
-
 
 }
 

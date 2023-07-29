@@ -11,7 +11,7 @@
 #include <iostream>
 #include <chrono>
 #include "reactor_exception.hpp"
-#include "../../logger/conf.hpp"
+#include "../logger/conf.hpp"
 
 using namespace std::chrono_literals;
 
@@ -42,24 +42,29 @@ namespace muse::rpc{
     /* 标识一个用户的完整报文 */
     class Request: public Servlet{
     private:
-        std::vector<bool>               piece_state;        // 分片状态
-        uint16_t                        piece_count;        // 有多少个分片
-        uint32_t                        total_data_size;    // 总共有多少数据
-        int                             socketFd {-1};      // socket
-        std::chrono::milliseconds       active_dt;          // 上次活跃时间
-        bool                            is_success;         //所有的数据都已经搞定了
+        std::vector<bool>               piece_state;         // 分片状态
+        uint16_t                        piece_count;         // 有多少个分片
+        uint32_t                        total_data_size;     // 总共有多少数据
+        int                             socketFd {-1};       // socket
+        bool                            is_success;          //所有的数据都已经搞定了
+        bool                            is_trigger{false};   //是否触发过
     public:
+        std::chrono::milliseconds       active_dt;           // 上次活跃时间
         std::shared_ptr<char[]>         data;
         Request(uint64_t _id, uint16_t _port, uint32_t _ip, uint16_t _pieces, uint32_t _data_size);
         Request(const Request& other) = default;
         uint32_t getTotalDataSize() const;
         uint16_t getPieceCount() const;
-        bool getPieceState(const uint32_t & _idx) const;
-        uint16_t setPieceState(const uint32_t & _index, bool value);
+        bool getPieceState(const uint16_t & _idx) const;
+        uint16_t setPieceState(const uint16_t & _index, bool value);
         void setSocket(int _socket_fd);
         uint16_t getAckNumber();
-        int getSocket();
-
+        int getSocket() const;
+        /*
+         * 防止多次触发处理事件
+         * */
+        void trigger();
+        bool getTriggerState() const;
     };
 }
 

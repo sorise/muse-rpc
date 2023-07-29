@@ -235,6 +235,8 @@ namespace muse::serializer{
             return *this;
         }
 
+        BinarySerializer& input(const std::tuple<> & tpl);
+
         template<typename T, typename... Args>
         BinarySerializer& inputArgs(const T& value, const Args&... args) {
             input(value);
@@ -591,8 +593,10 @@ namespace muse::serializer{
             }
             return *this;
         }
-        BinarySerializer &output(muse::serializer::IBinarySerializable &serializable);
 
+        BinarySerializer& output(std::tuple<> & tpl);
+
+        BinarySerializer &output(muse::serializer::IBinarySerializable &serializable);
     };
 
     template<>

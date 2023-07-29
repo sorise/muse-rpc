@@ -6,15 +6,15 @@
 #include "rpc/protocol/protocol.hpp"
 #include "timer/timer_wheel.hpp"
 #include "rpc/server/reactor.hpp"
-#include "logger/conf.hpp"
+#include "rpc/logger/conf.hpp"
 #include "rpc/server/reactor.hpp"
 #include "rpc/protocol/protocol.hpp"
 #include "serializer/binarySerializer.h"
 #include "rpc/client/invoker.hpp"
+#include "rpc/client/client.hpp"
 #include "timer/timer_wheel.hpp"
 #include "rpc/client/response_data.hpp"
 
-using namespace muse::logger;
 using namespace muse::rpc;
 using namespace muse::timer;
 using namespace std::chrono_literals;
@@ -24,14 +24,11 @@ int main(int argc, char *argv[]){
     std::pmr::pool_options option;
     option.largest_required_pool_block = 1024*1024*5; //5M
     option.max_blocks_per_chunk = 1024; //每一个chunk有多少个block
+
     auto pool = std::make_shared<std::pmr::synchronized_pool_resource>(option);
 
-    Invoker client("127.0.0.1", 15000);
+    Client remix("127.0.0.1", 15000, pool);
 
-    //创建一个二进制序列化器
-    muse::serializer::BinarySerializer serializer;
-    int32_t number = 10;
-    std::list<std::string> names{"remix", "muse", "coco" , "tome", "alice", "shower", "mock" };
     std::vector<double> scores = {
             84.01,98.1,15.2,98.2,15.89,84.01,98.1,15.2,98.2,15.89,84.01,98.1,15.2,98.2,15.89,
             84.01,98.1,15.2,98.2,15.89,84.01,98.1,15.2,98.2,15.89,84.01,98.1,15.2,98.2,15.89,
@@ -60,16 +57,13 @@ int main(int argc, char *argv[]){
             84.01,98.1,15.2,98.2,15.89,84.01,98.1,15.2,98.2,15.89,84.01,98.1,15.2,98.2,15.89,
             84.01,98.1,15.2,98.2,15.89,84.01,98.1,15.2,98.2,15.89,84.01,98.1,15.2,98.2,15.89,
     };
-    //序列化
-    serializer.inputArgs(number, names, scores);
-    
-    auto response = client.request(serializer.getBinaryStream(), serializer.byteCount(), ResponseDataFactory(pool));
 
-    if (response.isOk()){
-        std::cout << "send is ok!" <<std::endl;
+    auto result =remix.call<std::vector<double>>("test_fun2",scores);
+    if (result.isOK()){
+        std::printf("success\n");
+        std::cout << result.value.size() << std::endl;
     }else{
-        std::cout << "error： " << (short)response.getFailureReason() << std::endl;
+        std::printf("failed\n");
     }
-
     return 0;
 }

@@ -348,6 +348,18 @@ namespace muse::rpc{
         }else{
             return *(reinterpret_cast<uint16_t *>(protocol + 6));
         }
-    };
+    }
+
+    int Protocol::getSendCount(const uint16_t& piece_count) {
+        if (piece_count <= 3){
+            return 1;
+        }else if (piece_count > 3 && piece_count <= 10){
+            return 3;
+        }else if (piece_count > 10 && piece_count <= 1024){
+            return 5;
+        }else{
+            return 7;
+        }
+    }
 
 }

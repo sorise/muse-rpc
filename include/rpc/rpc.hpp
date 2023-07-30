@@ -9,7 +9,7 @@
 #include "memory/conf.hpp"
 #include "client/client.hpp"
 #include "server/registry.hpp"
-#include "server/concurrent_registry.hpp"
+#include "server/synchronous_registry.hpp"
 #include "server/reactor.hpp"
 #include "server/sub_reactor.hpp"
 #include "server/route_service.hpp"
@@ -25,7 +25,7 @@
 
 //同步方法，一次只能一个线程执行此方法
 #define muse_bind_sync(...) \
-    Singleton<ConcurrentRegistry>()->Bind(__VA_ARGS__);
+    Singleton<SynchronousRegistry>()->Bind(__VA_ARGS__);
 
 namespace muse::rpc{
     template <class T>

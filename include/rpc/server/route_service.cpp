@@ -61,7 +61,7 @@ namespace muse::rpc{
     }
 
 
-    RouteService::RouteService(std::shared_ptr<Registry> _registry, std::shared_ptr<ConcurrentRegistry> _concurrent_registry)
+    RouteService::RouteService(std::shared_ptr<Registry> _registry, std::shared_ptr<SynchronousRegistry> _concurrent_registry)
     :registry(std::move(_registry)),concurrent_registry(std::move(_concurrent_registry))
     {
 

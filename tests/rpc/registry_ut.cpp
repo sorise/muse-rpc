@@ -4,7 +4,7 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 #include "rpc/server/registry.hpp"
-#include "rpc/server/concurrent_registry.hpp"
+#include "rpc/server/synchronous_registry.hpp"
 
 using namespace muse::rpc;
 
@@ -77,10 +77,10 @@ TEST_CASE("Bind class number-function", "[Registry]"){
     REQUIRE(r_name == "remix");
 }
 
-TEST_CASE("class Number", "[ConcurrentRegistry]"){
+TEST_CASE("class Number", "[SynchronousRegistry]"){
     Normal normal(0, "remix");
 
-    ConcurrentRegistry registry;
+    SynchronousRegistry registry;
     registry.Bind("Normal::addValue", &Normal::addValue, &normal);
 
     std::thread t1([&](){
@@ -104,10 +104,10 @@ TEST_CASE("class Number", "[ConcurrentRegistry]"){
 }
 
 
-TEST_CASE("function pointer", "[ConcurrentRegistry]"){
+TEST_CASE("function pointer", "[SynchronousRegistry]"){
     Normal normal(0, "remix");
 
-    ConcurrentRegistry registry;
+    SynchronousRegistry registry;
     REQUIRE_NOTHROW(registry.Bind("test", test_fun1));
 
 }

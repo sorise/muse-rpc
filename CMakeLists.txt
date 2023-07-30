@@ -42,7 +42,7 @@ add_library(rpc SHARED
         ${CMAKE_SOURCE_DIR}/include/rpc/server/middleware_channel.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/route_service.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/zlib_service.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/concurrent_registry.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/synchronous_registry.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/response_data.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/invoker.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/client.cpp

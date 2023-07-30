@@ -1,5 +1,5 @@
-#ifndef MUSE_RPC_CONCURRENT_REGISTRY_HPP
-#define MUSE_RPC_CONCURRENT_REGISTRY_HPP
+#ifndef MUSE_RPC_SYNCHRONOUS_REGISTRY_HPP
+#define MUSE_RPC_SYNCHRONOUS_REGISTRY_HPP
 #include <iostream>
 #include <unordered_map>
 #include "serializer/binarySerializer.h"
@@ -44,13 +44,13 @@ namespace muse::rpc{
         Controller(std::function<void(BinarySerializer*)>&& f);
     };
 
-    class ConcurrentRegistry {
+    class SynchronousRegistry {
     private:
         //方法存储中心，使用hash 列表 存储, 参数是 BinarySerializer
         //是否需要线程安全，互斥量
         std::unordered_map<std::string, std::shared_ptr<Controller>> concurrent_dictionary;
     public:
-        ConcurrentRegistry() = default;
+        SynchronousRegistry() = default;
     private:
 
         // 用tuple做参数调用函数模板类
@@ -160,7 +160,7 @@ namespace muse::rpc{
         template<typename F>
         bool Bind(const std::string& name, F func){
             if (concurrent_dictionary.find(name) == concurrent_dictionary.end()){
-                concurrent_dictionary[name] = std::make_shared<Controller>(std::bind(&ConcurrentRegistry::Proxy<F>, this, func, std::placeholders::_1));
+                concurrent_dictionary[name] = std::make_shared<Controller>(std::bind(&SynchronousRegistry::Proxy<F>, this, func, std::placeholders::_1));
                 return true;
             }
             return false;
@@ -170,7 +170,7 @@ namespace muse::rpc{
         template<typename F, typename C>
         bool Bind(const std::string& name, F func, C *c){
             if (concurrent_dictionary.find(name) == concurrent_dictionary.end()){
-                concurrent_dictionary[name] = std::make_shared<Controller>(std::bind(&ConcurrentRegistry::Proxy<F,C>, this, func, c, std::placeholders::_1));
+                concurrent_dictionary[name] = std::make_shared<Controller>(std::bind(&SynchronousRegistry::Proxy<F,C>, this, func, c, std::placeholders::_1));
                 return true;
             }
             return false;
@@ -186,4 +186,4 @@ namespace muse::rpc{
         void runEnsured(const std::string& name, BinarySerializer *serializer);
     };
 }
-#endif //MUSE_RPC_CONCURRENT_REGISTRY_HPP
+#endif //MUSE_RPC_SYNCHRONOUS_REGISTRY_HPP

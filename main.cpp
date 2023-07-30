@@ -98,7 +98,7 @@ int main() {
 
     //注册中间件
     MiddlewareChannel::configure<ZlibService>();  //解压缩
-    MiddlewareChannel::configure<RouteService>(Singleton<Registry>(), Singleton<ConcurrentRegistry>()); //方法的路由
+    MiddlewareChannel::configure<RouteService>(Singleton<Registry>(), Singleton<SynchronousRegistry>()); //方法的路由
 
     //启动线程池
     GetThreadPoolSingleton();

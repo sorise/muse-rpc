@@ -3,6 +3,8 @@
 //
 #include "pool.hpp"
 
+#include <memory>
+
 namespace muse::pool{
     //核心线程运行逻辑
     void ThreadPool::coreRun(unsigned int threadIndex){
@@ -150,9 +152,6 @@ namespace muse::pool{
         }catch(const std::exception& e){
             //需要一个日志系统
             return false;
-        }catch(const char *error){
-            std::cerr<< error << '\n';
-            return false;
         }catch (...) {
             return false;
         }
@@ -166,13 +165,13 @@ namespace muse::pool{
             if(ThreadPoolType::Flexible == Type){
                 workers.resize(MaxThreadCount);
                 for (int i = 0; i < MaxThreadCount; ++i) {
-                    workers[i] = std::shared_ptr<Worker>(new Worker());
+                    workers[i] = std::make_shared<Worker>();
                 }
             }else if (ThreadPoolType::Fixed == Type){
                 //如果是固定大小的线程池
                 workers.resize(cores);
                 for (int i = 0; i < cores; ++i) {
-                    workers[i] = std::shared_ptr<Worker>(new Worker());
+                    workers[i] = std::make_shared<Worker>();
                 }
             }
         }catch(...){
@@ -188,7 +187,7 @@ namespace muse::pool{
         if (Type == ThreadPoolType::Flexible && cores < MaxThreadCount ){
             //启动管理线程,实现动态增长
             try {
-                managerThread = std::shared_ptr<std::thread> (new std::thread(&ThreadPool::managerThreadTask, this));
+                managerThread = std::make_shared<std::thread> (&ThreadPool::managerThreadTask, this);
             }catch(...){
                 throw std::runtime_error("The management thread failed to start due to insufficient memory!");
             }
@@ -202,8 +201,6 @@ namespace muse::pool{
         while(!stopCommitState.load(std::memory_order_acquire)){
             //运行频率
             std::this_thread::sleep_for(timeUnit);
-            //检测任务队列情况 , 不需要互斥读
-            int count = queueTask.size();
             //获得空闲线程数量
             int vacant =  vacantThreadsCount.load(std::memory_order_relaxed);
             if (vacant > 2){
@@ -230,7 +227,6 @@ namespace muse::pool{
     Type(_type),
     timeUnit(unit)
     {
-        printf("thread pool start\n");
         if (coreThreadsCount > MaxThreadCount)
             throw std::runtime_error("(count <= MaxThreadCount)The number of core threads exceeds the maximum specified number of threads！");
         cores = (cores <= 0)?4:cores; //初始化线程数量
@@ -392,6 +388,5 @@ namespace muse::pool{
             //是否调用过 close 方法！
             if(!isTerminated.load(std::memory_order_acquire)) close();
         }
-        printf("thread pool die\n");
     }
 }

@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <iostream>
 #include "conf.h"
+#include <functional>
 
 #ifndef MUSE_THREAD_POOL_EXECUTOR_H
 #define MUSE_THREAD_POOL_EXECUTOR_H  1

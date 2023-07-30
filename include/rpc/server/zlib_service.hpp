@@ -1,22 +1,20 @@
 //
-// Created by remix on 23-7-28.
+// Created by remix on 23-7-30.
 //
 
-#ifndef MUSE_RPC_ROUTE_SERVICE_HPP
-#define MUSE_RPC_ROUTE_SERVICE_HPP
+#ifndef MUSE_RPC_ZLIB_SERVICE_HPP
+#define MUSE_RPC_ZLIB_SERVICE_HPP
 #include "middleware_service.hpp"
-#include "concurrent_registry.hpp"
-#include "registry.hpp"
-#include "../logger/conf.hpp"
+#include "../protocol/protocol.hpp"
+#include <zlib.h>
 
 namespace muse::rpc{
-    //路由服务，用于方法的定位
-    class RouteService: public middleware_service{
+    class ZlibService: public middleware_service {
     private:
-        std::shared_ptr<ConcurrentRegistry> concurrent_registry;
-        std::shared_ptr<Registry> registry;
+        Protocol protocol;
     public:
-        RouteService(std::shared_ptr<Registry> _registry, std::shared_ptr<ConcurrentRegistry> _concurrent_registry);
+        ZlibService() = default;
+        ~ZlibService() override = default;
 
         //数据输入 解压、解密
         std::tuple<std::shared_ptr<char[]>, size_t , std::shared_ptr<std::pmr::synchronized_pool_resource>>
@@ -26,8 +24,8 @@ namespace muse::rpc{
         std::tuple<std::shared_ptr<char[]>, size_t , std::shared_ptr<std::pmr::synchronized_pool_resource>>
         Out(std::shared_ptr<char[]> data, size_t data_size, std::shared_ptr<std::pmr::synchronized_pool_resource> _memory_pool) override;
 
-        ~RouteService() override = default;
     };
 }
 
-#endif //MUSE_RPC_ROUTE_SERVICE_HPP
+
+#endif //MUSE_RPC_ZLIB_SERVICE_HPP

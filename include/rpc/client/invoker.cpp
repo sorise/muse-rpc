@@ -47,16 +47,26 @@ namespace muse::rpc{
         if (socket_fd != -1) close(socket_fd);
     }
 
-    ResponseData Invoker::request(const char *data, size_t data_size, ResponseDataFactory factory) {
+    ResponseData Invoker::request(const char *_data, size_t data_size, ResponseDataFactory factory) {
+        if (data_size > 1024 * 1024 * 100){
+            throw std::runtime_error("The data volume exceeds the 100M limit！");
+        }
+        std::shared_ptr<char[]> data_share(const_cast<char*>(_data), [](char *ptr){  });
+
+        auto tpl = zlib_service.Out(data_share, data_size, factory.getPool());
+        std::shared_ptr<char[]> data = std::get<0>(tpl);
+        data_size = std::get<1>(tpl);
+
         ResponseData response = factory.getResponseData();
+        uint16_t  ack_accept = 0;
         // 总数据量
-        total_size = data_size;
-        piece_count =  data_size/Protocol::defaultPieceLimitSize + (((total_size % Protocol::defaultPieceLimitSize) == 0)?0:1);
-        auto last_piece_size = (total_size % Protocol::defaultPieceLimitSize == 0)? Protocol::defaultPieceLimitSize:total_size % Protocol::defaultPieceLimitSize ; /* 数据部分 */
+        uint32_t total_size = data_size;
+        uint16_t piece_count =  data_size/Protocol::defaultPieceLimitSize + (((total_size % Protocol::defaultPieceLimitSize) == 0)?0:1);
+        uint16_t last_piece_size = (total_size % Protocol::defaultPieceLimitSize == 0)? Protocol::defaultPieceLimitSize:total_size % Protocol::defaultPieceLimitSize ; /* 数据部分 */
         auto message_id = muse::timer::TimerWheel::GetTick().count();
 
-        char buffer[Protocol::FullPieceSize + 1];        // 缓存区
-        socklen_t len = sizeof(server_address);          //ok
+        char buffer[Protocol::FullPieceSize + 1];         // 缓存区
+        socklen_t len = sizeof(server_address);           // ok
         int times = Protocol::getSendCount(piece_count);  //获得发送次数
 
         int needTry = Invoker::tryTimes;    //超时尝试次数
@@ -77,7 +87,7 @@ namespace muse::rpc{
                     // 设置序号和大小
                     protocol.setProtocolOrderAndSize(buffer, i, pieceDataPartSize);
                     protocol.setAcceptMinOrder(buffer, ack_accept);
-                    std::memcpy(buffer + Protocol::protocolHeaderSize, data + (i * Protocol::defaultPieceLimitSize), pieceDataPartSize); //body
+                    std::memcpy(buffer + Protocol::protocolHeaderSize, data.get() + (i * Protocol::defaultPieceLimitSize), pieceDataPartSize); //body
                     // 发送输出到服务器
                     ::sendto(socket_fd, buffer,  Protocol::protocolHeaderSize + pieceDataPartSize, 0, (struct sockaddr*)&server_address, len);
                     SPDLOG_INFO("Invoker send request data {} order {}", pieceDataPartSize, i);
@@ -93,11 +103,8 @@ namespace muse::rpc{
                     ProtocolHeader header = protocol.parse(buffer,recvLength, isSuccess);
                     if (isSuccess){
                         if (header.timePoint != message_id){
-                            //不是我需要的返回消息，这说明服务器故障
-                            response.isSuccess = false;
-                            response.reason = FailureReason::TheRunningLogicOfTheServerIncorrect;
                             SPDLOG_ERROR("get message id {} expect message id {}!", header.timePoint, message_id);
-                            return response;
+                            continue; //下一轮
                         }
                         receiveMessageCount++;
                         needTry = Invoker::tryTimes; //重置尝试次数，只有收到正确的数据才会重置
@@ -111,7 +118,6 @@ namespace muse::rpc{
                                     break; //跳出 for
                                 }
                             }else if (header.type == ProtocolType::TimedOutResponseHeartbeat){
-                                server_is_active = true;
                                 //重置尝试次数 上面已经做了
                             }else if (header.type == ProtocolType::TheServerResourcesExhausted){
                                 //服务器资源已经耗尽，无法接受处理
@@ -148,13 +154,15 @@ namespace muse::rpc{
                 }
             }
         }
-        int responseNeedTry = Invoker::tryTimes;    //超时尝试次数
-
-        struct timeval tm_phase_response = {0,Invoker::WaitingTimeout};
-        setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tm_phase_response, sizeof(struct timeval));
 
         //阶段 2
         SPDLOG_INFO("go in phase response");
+        int responseNeedTry = Invoker::tryTimes;    //超时尝试次数
+
+        //重新设置超时时间
+        struct timeval tm_phase_response = {0,Invoker::WaitingTimeout};
+        setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tm_phase_response, sizeof(struct timeval));
+
         while (true){
             auto recvLength = recvfrom(socket_fd, buffer, Protocol::FullPieceSize + 1,0, (struct sockaddr*)&server_address, &len);
             if (recvLength > 0){
@@ -162,49 +170,50 @@ namespace muse::rpc{
                 ProtocolHeader header = protocol.parse(buffer,recvLength, isSuccess);
                 if (isSuccess){
                     if (header.timePoint != message_id){
-                        //不是我需要的返回消息，这说明服务器故障
-                        response.isSuccess = false;
-                        response.reason = FailureReason::TheRunningLogicOfTheServerIncorrect;
+                        //不是我需要的返回消息,忽略
                         SPDLOG_ERROR("get message id {} expect message id {}!", header.timePoint, message_id);
-                        return response;
-                    }
-                    if (header.phase == CommunicationPhase::Request){
-                        //历史消息，不用处理
-                    }else if(header.phase == CommunicationPhase::Response){
-                        responseNeedTry = Invoker::tryTimes; //重置尝试次数，只有收到正确的数据才会重置
-                        if (header.type == ProtocolType::RequestSend){
-                            SPDLOG_INFO("Get Data From Response Server order {}", header.pieceOrder);
-                            //只会初始化一次
-                            response.initialize(header.timePoint, header.totalCount, header.totalSize);
-                            //保存数据
-                            auto des = response.data.get() +  header.pieceOrder * Protocol::defaultPieceLimitSize;
-                            // 完成报文内容拷贝
-                            std::memcpy(des, buffer + muse::rpc::Protocol::protocolHeaderSize ,header.pieceSize);
-                            auto ACK = response.setPieceState(header.pieceOrder , true);
-                            sendResponseACK(socket_fd, ACK, header.timePoint);
-                            SPDLOG_INFO("send ACK {} to server total {}", ACK, response.piece_count);
-                            if (ACK == response.piece_count){
-                                SPDLOG_INFO("get ALL response data!");
-                                break;
+                        continue; //下一轮
+                    }else{
+                        if (header.phase == CommunicationPhase::Request){
+                            responseNeedTry = Invoker::tryTimes; //重置尝试次数，只有收到正确的数据才会重置
+                        }
+                        else if(header.phase == CommunicationPhase::Response){
+                            responseNeedTry = Invoker::tryTimes; //重置尝试次数，只有收到正确的数据才会重置
+                            if (header.type == ProtocolType::RequestSend){
+                                SPDLOG_INFO("Get Data From Response Server order {}", header.pieceOrder);
+                                //只会初始化一次
+                                response.initialize(header.timePoint, header.totalCount, header.totalSize);
+                                //保存数据
+                                auto des = response.data.get() +  header.pieceOrder * Protocol::defaultPieceLimitSize;
+                                // 完成报文内容拷贝
+                                std::memcpy(des, buffer + muse::rpc::Protocol::protocolHeaderSize ,header.pieceSize);
+                                auto ACK = response.setPieceState(header.pieceOrder , true);
+                                sendResponseACK(socket_fd, ACK, header.timePoint);
+                                SPDLOG_INFO("send ACK {} to server total {}", ACK, response.piece_count);
+                                if (ACK == response.piece_count){
+                                    SPDLOG_INFO("get ALL response data!");
+                                    break;
+                                }
+                            }else if(header.type == ProtocolType::RequestACK){
+                                SPDLOG_INFO("Get RequestACK From Response Server");
+                                uint16_t ackOrder = response.is_initial?response.getAckNumber():0;
+                                sendResponseACK(socket_fd, ackOrder, header.timePoint);
+                            }else if(header.type == ProtocolType::TimedOutResponseHeartbeat){
+                                SPDLOG_INFO("Get TimedOutResponseHeartbeat From Response Server");
+                                //重置 needTry  上面已经重置了
+                                SPDLOG_INFO("waiting server to process");
+                            }else if(header.type == ProtocolType::TimedOutRequestHeartbeat){
+                                SPDLOG_INFO("Get TimedOutRequestHeartbeat From Response Server");
+                                sendHeartbeat(socket_fd, header.timePoint);
+                            }else{
+                                //没必要处理
+                                SPDLOG_INFO("accept a error type message {}", typeid(header.type).name());
                             }
-                        }else if(header.type == ProtocolType::RequestACK){
-                            SPDLOG_INFO("Get RequestACK From Response Server");
-                            uint16_t ackOrder = response.is_initial?response.getAckNumber():0;
-                            sendResponseACK(socket_fd, ackOrder, header.timePoint);
-                        }else if(header.type == ProtocolType::TimedOutResponseHeartbeat){
-                            SPDLOG_INFO("Get TimedOutResponseHeartbeat From Response Server");
-                            //重置 needTry  上面已经重置了
-                            SPDLOG_INFO("waiting server to process");
-                        }else if(header.type == ProtocolType::TimedOutRequestHeartbeat){
-                            SPDLOG_INFO("Get TimedOutRequestHeartbeat From Response Server");
-                            sendHeartbeat(socket_fd, header.timePoint);
-                        }else{
-                            //没必要处理
-                            SPDLOG_INFO("accept a error type message {}", typeid(header.type).name());
                         }
                     }
                 }
-            }else{
+            }
+            else{
                 responseNeedTry--;
                 sendRequestHeartbeat(socket_fd, message_id);
                 SPDLOG_WARN("response send request heart beat");
@@ -217,6 +226,11 @@ namespace muse::rpc{
                 }
             }
         }
+
+        auto realTpl = zlib_service.In(response.data, response.total_size, factory.getPool());
+
+        response.data = std::get<0>(realTpl);
+        response.total_size = std::get<1>(realTpl);
         response.isSuccess = true;
         return response;
     }
@@ -270,5 +284,25 @@ namespace muse::rpc{
         );
         protocol.setProtocolPhase(buffer,CommunicationPhase::Response);
         ::sendto(_socket_fd, buffer,  Protocol::protocolHeaderSize, 0, (struct sockaddr*)&server_address, sizeof(server_address));
+    }
+
+    void Invoker::Bind(uint16_t _local_port) {
+        //服务器地址
+        sockaddr_in serverAddress{
+                PF_INET,
+                htons(_local_port),
+                htonl(INADDR_ANY)
+        };
+        int on = 1;
+        //地址复用 端口复用
+        setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+        //地址复用 端口复用
+        setsockopt(socket_fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+
+        //绑定端口号 和 IP
+        if(bind(socket_fd, (const struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1){
+            SPDLOG_ERROR("socket bind port {} error, errno {}", _local_port, errno);
+            throw std::runtime_error("local port has been use by other program!");
+        }
     }
 }

@@ -62,15 +62,19 @@ namespace muse::rpc{
         }
 
 
-        template<typename R, const std::string& name, typename ...Argc>
+        template<typename R, typename ...Argc>
         typename std::enable_if<std::is_same<R, void>::value, Outcome<void>>::type
-        call(Argc&&...argc){
-            Outcome<R> result;
+        call( const std::string& name, Argc&&...argc){
+            Outcome<void> result;
             BinarySerializer serializer;
             std::tuple<Argc...> tpl(argc...);
             serializer.input(name);
             serializer.input(tpl);
             ResponseData responseData = invoker.request(serializer.getBinaryStream(), serializer.byteCount(), factory);
+
+            if (!responseData.isOk()){
+                throw std::runtime_error("ext");
+            }
             if (responseData.isOk()){
                 //写入数据
                 try {
@@ -89,6 +93,11 @@ namespace muse::rpc{
             }
             return result;
         }
+
+        void Bind(uint16_t _local_port);
+
+
+
     };
 }
 #endif //MUSE_RPC_CLIENT_HPP

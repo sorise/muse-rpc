@@ -34,6 +34,10 @@ namespace muse::rpc{
         this->pool = other.pool;
     }
 
+    std::shared_ptr<std::pmr::synchronized_pool_resource> ResponseDataFactory::getPool() {
+        return this->pool;
+    }
+
     bool ResponseData::isOk() const { return this->isSuccess;};
     uint32_t ResponseData::getSize() const {return this->total_size;};
     FailureReason ResponseData::getFailureReason() const { return this->reason;};

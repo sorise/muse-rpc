@@ -33,7 +33,9 @@ namespace muse::rpc{
                     concurrent_registry->runEnsured(request_name, &serializer);
                 }
             }
-        } catch (...) {
+        }
+        catch (...)
+        {
             //读取方法名称错误
             serializer.clear();
             RpcResponseHeader header;
@@ -59,8 +61,8 @@ namespace muse::rpc{
     }
 
 
-    RouteService::RouteService(Registry *_registry, ConcurrentRegistry *_concurrent_registry)
-    :registry(_registry),concurrent_registry(_concurrent_registry)
+    RouteService::RouteService(std::shared_ptr<Registry> _registry, std::shared_ptr<ConcurrentRegistry> _concurrent_registry)
+    :registry(std::move(_registry)),concurrent_registry(std::move(_concurrent_registry))
     {
 
     }

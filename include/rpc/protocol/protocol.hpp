@@ -40,6 +40,8 @@ namespace muse::rpc{
     private:
         muse::serializer::ByteSequence by; //当前主机的字节序
     public:
+        muse::serializer::ByteSequence getByteSequence();
+
         Protocol();
         // 协议头大小
         static constexpr const unsigned int protocolHeaderSize = 26;

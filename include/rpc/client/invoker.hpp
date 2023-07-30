@@ -14,7 +14,8 @@
 #include "invoker_exception.hpp"
 #include <cstring>
 #include "response_data.hpp"
-
+#include "../server/zlib_service.hpp"
+#include "../memory/conf.hpp"
 //阻塞模式
 namespace muse::rpc{
     class ResponseData;
@@ -30,23 +31,22 @@ namespace muse::rpc{
         static constexpr long WaitingTimeout = 600000; //0.6s
         static constexpr int tryTimes = 3;
     private:
+        ZlibService zlib_service;
         struct sockaddr_in server_address{};
-        uint32_t total_size {0};
-        uint16_t piece_count;
-        uint16_t ack_accept {0};
         int socket_fd;
         Protocol protocol{};
-        bool server_is_active {true};
         void sendResponseACK(int _socket_fd, uint16_t _ack_number,  uint64_t _message_id);
         void sendHeartbeat(int _socket_fd, uint64_t _message_id);
         /* 请求服务器，是否还在处理数据 */
         void sendRequestHeartbeat(int _socket_fd, uint64_t _message_id);
     public:
+        void Bind(uint16_t _local_port);
         Invoker(const char * _ip_address, const uint16_t& port);
         Invoker(int _socket_fd, const char * _ip_address, const uint16_t& port);
         void setSocket(int _socket_fd);
-        ResponseData request(const char *data, size_t data_size, ResponseDataFactory factory);
+        ResponseData request(const char *_data, size_t data_size, ResponseDataFactory factory);
         ~Invoker();
+
     };
 
 

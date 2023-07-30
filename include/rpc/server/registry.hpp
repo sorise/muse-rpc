@@ -2,6 +2,7 @@
 #define MUSE_RPC_REGISTRY_HPP
 #include <iostream>
 #include <unordered_map>
+#include <functional>
 #include "serializer/binarySerializer.h"
 #include "rpc_response_header.hpp"
 

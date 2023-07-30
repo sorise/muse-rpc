@@ -362,4 +362,8 @@ namespace muse::rpc{
         }
     }
 
+    muse::serializer::ByteSequence Protocol::getByteSequence() {
+        return this->by;
+    }
+
 }

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
 add_executable(protocol_conf_ut rpc/protocol_conf_ut.cpp)
 add_executable(server_request_ut rpc/server_request_ut.cpp)

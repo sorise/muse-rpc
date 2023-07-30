@@ -35,6 +35,8 @@ namespace muse::rpc{
         static constexpr const std::chrono::milliseconds ConnectionTimeOut = 120000ms;
         //request 超时时间
         static constexpr const std::chrono::milliseconds RequestTimeOut = 5000ms;
+        //response 超时时间
+        static constexpr const std::chrono::milliseconds ResponseTimeOut = 12000ms;
     private:
         uint16_t port;                                                        // 当前端口
         Protocol protocol_util{};                                             // 协议对象
@@ -48,7 +50,7 @@ namespace muse::rpc{
         int activeConnectionsCount {0};                                       // 目前维持的链接数量
         std::shared_ptr<std::pmr::synchronized_pool_resource> pool;           // 内存池
         std::shared_ptr<std::thread> runner;                                  // 运行线程
-        std::atomic<bool> runState {false };                                           // 是否在运行
+        std::atomic<bool> runState {false };                                // 是否在运行
         muse::timer::TimerTree treeTimer;                                     // 定时器
         //发送缓存区
         char sendBuf[Protocol::FullPieceSize + 1] = { '\0' };
@@ -89,8 +91,14 @@ namespace muse::rpc{
          * */
         void sendRequireACK(int _socket_fd, uint64_t _message_id, uint16_t _accept_min_order, CommunicationPhase phase = CommunicationPhase::Response);
         /*
-         * 防止request一直在 message 队列中。
+         * 防止request一直在 message 队列中，对于超过 SubReactor::timeout 时间没有客户端响应的
+         * message 删除掉！
          * */
+
+        void setResponseClearTimeout(VirtualConnection *vir, uint64_t _message_id);
+
+        void judgeResponseClearTimeout(VirtualConnection *vir, uint64_t _message_id);
+
         void setRequestTimeOutEvent(const Servlet& servlet);
         /* 判断是否可以删除 request */
         void judgeDelete(const Servlet& _servlet);
@@ -100,16 +108,14 @@ namespace muse::rpc{
          * VirtualConnection* 结果获取
          * 全部由线程池来处理
          * */
-        void trigger(const std::map<Servlet, Request, std::less<>>::iterator& it, VirtualConnection *vir);
+        void trigger(const Servlet& servlet, VirtualConnection *vir);
 
-        void triggerTask(const std::map<Servlet, Request, std::less<>>::iterator& it, VirtualConnection *vic);
+        void triggerTask(const Servlet& servlet, VirtualConnection *vic);
 
-        /*
-         * 关闭一个 connect udp socket,并且将其从 epoll 中 移除
-         * */
+        /* 关闭一个 connect udp socket,并且将其从 epoll 中 移除 */
         void closeSocket(const int& _socket_fd, struct sockaddr_in addr) const;
 
-        void sendResponseDataToClient(VirtualConnection *vir, std::list<Response>::iterator& it);
+        void sendResponseDataToClient(VirtualConnection *vir, uint64_t _message_id);
     public:
         /*
          * 主反应堆 将新链接传输到 从反应堆的接口
@@ -126,17 +132,11 @@ namespace muse::rpc{
         SubReactor& operator=(const SubReactor &other) = delete;
         SubReactor(SubReactor &&other) = delete;
         SubReactor& operator=(SubReactor &&other) = delete;
-        /*
-         * 启动方法，对外接口，开启一个线程运行 loop 方法
-         * */
+        /* 启动方法，对外接口，开启一个线程运行 loop 方法 */
         void start();
-        /*
-         * 停止线程运行，无法再次 start !
-         * */
+        /* 停止线程运行，无法再次 start ! */
         void stop();
-        /*
-         * 析构函数，需要关闭线程，还需要清理资源，包括epoll、request、新链接、现有的虚拟连接对象
-         * */
+        /* 析构函数，需要关闭线程，还需要清理资源，包括epoll、request、新链接、现有的虚拟连接对象 */
         ~SubReactor();
     };
 }

@@ -9,4 +9,8 @@ namespace muse::rpc{
     : invoker(_ip_address, _port), factory(std::move(_pool)){
 
     }
+
+    void Client::Bind(uint16_t _local_port) {
+        invoker.Bind(_local_port);
+    }
 };

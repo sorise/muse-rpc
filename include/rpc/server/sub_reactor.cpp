@@ -51,14 +51,6 @@ namespace muse::rpc{
         //启动从引擎
         while (runState.load(std::memory_order_relaxed)){
             auto timer_out = treeTimer.checkTimeout();
-            time_t tm = 20;
-            if (timer_out > -1){
-                if (timer_out < tm){
-                    tm = timer_out;
-                }
-            }
-            //std::cout << tm <<std::endl;
-            //启动
             auto readyCount = epoll_wait(epollFd, epollQueue,openMaxConnection , 10);
             //获得当前时间 毫秒
             auto now = GetNowTick();
@@ -76,11 +68,13 @@ namespace muse::rpc{
                         auto header = protocol_util.parse(recvBuf, recvLen, isSuccess);
                         // 读取成功 上交报文，建立链接
                         if (isSuccess){
-                            //处理 Request 阶段
-                            Servlet base(header.timePoint, ntohs(addr.sin_port), ntohl(addr.sin_addr.s_addr));
-                            auto it= messages.find(base);
-                            if (it != messages.end()) { it->second.active_dt = now; }
                             if (header.phase == CommunicationPhase::Request){
+                                //处理 Request 阶段
+                                Servlet base(header.timePoint, ntohs(addr.sin_port), ntohl(addr.sin_addr.s_addr));
+                                auto it= messages.find(base);
+                                if (it != messages.end()) {
+                                    it->second.active_dt = now;
+                                }
                                 SPDLOG_INFO("Sub-Reactor accept message request from id [{}] ip [{}] port [{}]", header.timePoint, inet_ntoa(addr.sin_addr), htons(addr.sin_port));
                                 //这是数据报文
                                 message_queue::iterator ite;
@@ -122,7 +116,7 @@ namespace muse::rpc{
                                         vc->messages.emplace_back(header.timePoint); //存储ID
                                         if (!ite->second.getTriggerState()){
                                             ite->second.trigger();
-                                            trigger(ite, vc);
+                                            trigger(ite->first, vc);
                                         }
                                     }
                                 }
@@ -144,39 +138,43 @@ namespace muse::rpc{
                                 }
                             }
                             else if(header.phase == CommunicationPhase::Response){
+                                SPDLOG_INFO("Sub-Reactor accept message response from id [{}] ip [{}] port [{}]", header.timePoint, inet_ntoa(addr.sin_addr), htons(addr.sin_port));
                                 //收到了二阶段的响应信息，先看这个响应信息有没有
                                 auto result = std::find_if(vc->messages.begin(), vc->messages.end(), [=](auto res)->bool {
                                     return res == header.timePoint;
                                 });
                                 //没有找到
-                                if (result == vc->messages.end()){
+                                if (result == vc->messages.end())
+                                {
                                     SPDLOG_INFO("Sub-Reactor Send the StateReset successfully Protocol timePoint {} {} {}", header.timePoint, vc->socket_fd, vc->messages.size());
                                     sendReset(vc->socket_fd, header.timePoint, CommunicationPhase::Response); //没有这个消息
-                                }else{
+                                }
+                                else
+                                {
                                     //找到这个响应消息，查看是数据是否准备好
-                                    auto it_response = std::find_if(vc->responses.begin(), vc->responses.end(), [=](Response &res)->bool {
-                                        return res.getID() == header.timePoint;
-                                    });
+                                    auto it_response = vc->responses.find(header.timePoint);
                                     //如果没有准备好
-                                    if (it_response != vc->responses.end()){
+                                    if (it_response == vc->responses.end())
+                                    {
                                         //只能发送心跳数据，说明服务器正在处理中，还没有准备好响应数据
+                                        SPDLOG_INFO("send Heart Beat to client");
                                         sendHeartbeat(vc->socket_fd, header.timePoint, CommunicationPhase::Response);
                                     }else{
                                         //响应数据已经准备好了
-                                        it_response->lastActive = now;
+                                        it_response->second.lastActive = now;
                                         //数据已经准备好了，正在发送中
                                         if (header.type == ProtocolType::ReceiverACK){
                                             SPDLOG_INFO("accept ACK {} from message id{}", header.acceptOrder, header.timePoint);
                                             //发送数据
-                                            it_response->setNewAckState(true);
+                                            it_response->second.setNewAckState(true);
                                             //收到了 ACK 确认
-                                            it_response->setAckAccept(header.acceptOrder);
+                                            it_response->second.setAckAccept(header.acceptOrder);
                                             //已经全部发送完毕，需要正常退出
-                                            if (it_response->getAckAccept() == it_response->getPieceCount()){
+                                            if (it_response->second.getAckAccept() == it_response->second.getPieceCount()){
                                                 //发送完毕，正常断开链接
                                                 SPDLOG_INFO("Sub Reactor finish {} request-response normally！", header.timePoint);
                                                 vc->responses.erase(it_response); //发送任务可以删除了
-                                                vc->messages.remove(it_response->getID()); //消息ID 也删除了
+                                                vc->messages.remove(it_response->second.getID()); //消息ID 也删除了
                                                 Servlet _base(header.timePoint, ntohs(addr.sin_port), ntohl(addr.sin_addr.s_addr));
                                                 auto req= messages.find(_base);
                                                 if (req != messages.end()){
@@ -185,20 +183,21 @@ namespace muse::rpc{
                                                 SPDLOG_INFO("Sub-Reactor send all response data ok!");
                                             }else{
                                                 //没有发送完！
-                                                sendResponseDataToClient(vc, it_response);
+                                                sendResponseDataToClient(vc, header.timePoint);
                                             }
                                         }
                                         else if (header.type == ProtocolType::TimedOutResponseHeartbeat){
                                             //收到的心跳信息
-                                            it_response->lastActive = now;//展示不知道有什么用
-                                        }else if (header.type == ProtocolType::TimedOutRequestHeartbeat){
+                                            it_response->second.lastActive = now;//展示不知道有什么用
+                                        }
+                                        else if (header.type == ProtocolType::TimedOutRequestHeartbeat){
                                             //收到了请求心跳信息，有数据了 直接发数据，而不是心跳
                                             SPDLOG_INFO("accept TimedOutRequestHeartbeat from message id{}", header.acceptOrder, header.timePoint);
-                                            if (it_response->getAckAccept() < it_response->getPieceCount()){
+                                            if (it_response->second.getAckAccept() < it_response->second.getPieceCount()){
                                                 //发数据
-                                                sendResponseDataToClient(vc, it_response);
+                                                sendResponseDataToClient(vc, header.timePoint);
                                             }else{
-                                                SPDLOG_INFO("ACK {} P COUNT {} ", it_response->getAckAccept(), it_response->getPieceCount());
+                                                SPDLOG_INFO("ACK {} P COUNT {} ", it_response->second.getAckAccept(), it_response->second.getPieceCount());
                                             }
                                         }
                                         else{
@@ -218,12 +217,11 @@ namespace muse::rpc{
                     else{
                         SPDLOG_WARN("main Reactor receive 0 bytes data from ip {} port {} errno {}" ,inet_ntoa(addr.sin_addr)  ,ntohs(addr.sin_port), errno);
                     }
-                    vc = nullptr;
                 }
                 if (epollQueue[i].events & EPOLLERR){
                     auto cv = (VirtualConnection *)epollQueue[i].data.ptr;
-                    //closeSocket(cv->socket_fd, cv->addr);
-                    SPDLOG_ERROR("epoll epollQueue errno: {} {} {}", errno, cv->socket_fd, (uint32_t)epollQueue[i].events);
+                    closeSocket(cv->socket_fd, cv->addr);
+                    SPDLOG_ERROR("epoll event EPOLLERR errno: {} {} {}", errno, cv->socket_fd, (uint32_t)epollQueue[i].events);
                     //throw std::runtime_error("exit"); //停掉服务直接退出
                 }
                 else if (epollQueue[i].events & EPOLLHUP){
@@ -241,7 +239,7 @@ namespace muse::rpc{
         }
     }
 
-    /* 处理新链接 ------- ------- -------- -------- */
+
     void SubReactor::dealWithNewConnection() {
         //进行互斥处理
         std::lock_guard<std::mutex> lock(newConLocker);
@@ -271,9 +269,8 @@ namespace muse::rpc{
 
             activeConnectionsCount++;
 
-            uint32_t events = EPOLLIN |EPOLLERR | EPOLLHUP| EPOLLRDHUP;
             VirtualConnection *vc = connections + findResult.second;
-            struct epoll_event ReactorEpollEvent{events, {.ptr = vc} };
+            struct epoll_event ReactorEpollEvent{ EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLRDHUP, {.ptr = vc} };
 
             if( epoll_ctl(epollFd, EPOLL_CTL_ADD, _socket_fd, &ReactorEpollEvent) == - 1 ){
                 close(_socket_fd); //关闭 socket
@@ -333,7 +330,7 @@ namespace muse::rpc{
                         SPDLOG_INFO("Sub Reactor accept all data of the message_id {} {} {}", header.timePoint, _socket_fd, vc->messages.size());
                         if (!ite->second.getTriggerState()){
                             ite->second.trigger();
-                            trigger(ite, vc);
+                            trigger(ite->first, vc);
                         }
                     }
                 }else if(header.type == ProtocolType::RequestACK){
@@ -396,7 +393,8 @@ namespace muse::rpc{
             SPDLOG_INFO("Sub-Reactor Send the ACK {} successfully Protocol timePoint {}", _ack_number, _message_id);
         }
     }
-    //标识当前链接已经被重置了
+
+    /* 标识当前链接已经被重置了 */
     void SubReactor::sendReset(int _socket_fd, uint64_t _message_id, CommunicationPhase phase) {
         char buffer[muse::rpc::Protocol::protocolHeaderSize];
         protocol_util.initiateSenderProtocolHeader(
@@ -414,7 +412,8 @@ namespace muse::rpc{
             SPDLOG_ERROR("Sub-Reactor Send the StateReset failed Protocol timePoint {}" ,_message_id);
         }
     }
-    //发送心跳信息
+
+    /* 发送心跳信息 */
     void SubReactor::sendHeartbeat(int _socket_fd, uint64_t _message_id, CommunicationPhase phase) {
         char buffer[muse::rpc::Protocol::protocolHeaderSize];
         protocol_util.initiateSenderProtocolHeader(
@@ -433,7 +432,8 @@ namespace muse::rpc{
             SPDLOG_ERROR("Sub-Reactor Send the Response Heart beat failed Protocol timePoint {}" ,_message_id);
         }
     }
-    //发送服务器资源已经耗尽
+
+    /* 发送服务器资源已经耗尽 */
     void SubReactor::sendExhausted(int _socket_fd) {
         char buffer[muse::rpc::Protocol::protocolHeaderSize];
         protocol_util.initiateSenderProtocolHeader(
@@ -492,23 +492,37 @@ namespace muse::rpc{
         return clearCount;
     }
 
-    void SubReactor::trigger(const std::map<Servlet, Request, std::less<>>::iterator& it, VirtualConnection *vic){
+    /* 不安全 迭代器很容易失效 */
+    void SubReactor::trigger(const Servlet& servlet, VirtualConnection *vic){
         SPDLOG_INFO("Sub Reactor task has been commit to thread pool");
-        auto ex = make_executor(&SubReactor::triggerTask, this, it, vic);
+        auto ex = make_executor(&SubReactor::triggerTask, this, servlet, vic);
         GetThreadPoolSingleton()->commit_executor(ex);
     }
 
-    void SubReactor::triggerTask(const std::map<Servlet, Request, std::less<>>::iterator& it, VirtualConnection *vc) {
-        //数据部分
-        auto data = it->second.data;
-        auto data_tuple = MiddlewareChannel::GetInstance()->In(data, static_cast<size_t>(it->second.getTotalDataSize()) , pool);
-        auto send_data_tuple = MiddlewareChannel::GetInstance()->Out(std::get<0>(data_tuple),std::get<1>(data_tuple),std::get<2>(data_tuple));
+    void SubReactor::triggerTask(const Servlet& servlet, VirtualConnection *vc) {
+        auto  it = messages.find(servlet);
+        if (it != messages.end()){
+            //数据部分
+            auto data = it->second.data;
+            auto data_tuple = MiddlewareChannel::GetInstance()->In(data, static_cast<size_t>(it->second.getTotalDataSize()) , pool);
+            auto send_data_tuple = MiddlewareChannel::GetInstance()->Out(std::get<0>(data_tuple),std::get<1>(data_tuple),std::get<2>(data_tuple));
 
-        std::shared_ptr<char[]> send = std::get<0>(send_data_tuple);
-        auto count = std::get<1>(send_data_tuple);
-        uint16_t _pieces = count/Protocol::defaultPieceLimitSize + (((count % Protocol::defaultPieceLimitSize) == 0)?0:1);
-        vc->responses.emplace_back(it->first.getID(), it->first.getHostPort(), it->first.getIpAddress(), _pieces, count, send);
-        SPDLOG_INFO("The response data has been transferred to the response object");
+            std::shared_ptr<char[]> send = std::get<0>(send_data_tuple);
+            auto count = std::get<1>(send_data_tuple);
+            uint16_t _pieces = count/Protocol::defaultPieceLimitSize + (((count % Protocol::defaultPieceLimitSize) == 0)?0:1);
+            auto result = vc->responses.insert_or_assign(servlet.getID(), Response(it->first.getID(), it->first.getHostPort(), it->first.getIpAddress(),
+                                                                     _pieces, count, send));
+            if (!result.second){
+                SPDLOG_INFO("The response data add failed ");
+            }else{
+                SPDLOG_INFO("The response data has been transferred to the response object");
+            }
+
+            setResponseClearTimeout(vc, servlet.getID()); //设置一个超时时间
+            treeTimer.setTimeout(5,[this](VirtualConnection *vc, uint64_t _id){
+                sendResponseDataToClient(vc, _id);
+            }, vc, servlet.getID());
+        }
     }
 
     /* 关闭 */
@@ -560,7 +574,7 @@ namespace muse::rpc{
         auto it= messages.find(_servlet);
         if (it != messages.end()){
             if ( GetNowTick() - it->second.active_dt > SubReactor::RequestTimeOut){
-                //messages.erase(it);
+                messages.erase(it);
                 SPDLOG_INFO("Sub-Reactor kill request timeout timer for {}", _servlet.getID());
             }else{
                 setRequestTimeOutEvent(_servlet);
@@ -573,27 +587,47 @@ namespace muse::rpc{
         treeTimer.setTimeout(SubReactor::RequestTimeOut.count(),&SubReactor::judgeDelete, this, _servlet);
     }
 
-    void SubReactor::sendResponseDataToClient(VirtualConnection *vir, std::list<Response>::iterator &response_start) {
+    void SubReactor::sendResponseDataToClient(VirtualConnection *vir, uint64_t _message_id) {
+        auto res = vir->responses.find(_message_id);
+        if (res == vir->responses.end()){
+            return;
+        }
         //发送次数
-        auto times = Protocol::getSendCount(response_start->getPieceCount());
-        auto ack_accept = response_start->getAckAccept();
-        auto piece_count = response_start->getPieceCount();
-        auto last_piece_size = response_start->getLastPieceSize();
+        auto times = 1;
+        auto ack_accept = res->second.getAckAccept();
+        auto piece_count = res->second.getPieceCount();
+        auto last_piece_size = res->second.getLastPieceSize();
         uint16_t start = ack_accept + times;
         for (uint16_t k = ack_accept; k < start && k < piece_count; ++k) {
-            protocol_util.initiateSenderProtocolHeader(sendBuf,response_start->getID(),response_start->getTotalDataSize(), Protocol::protocolHeaderSize);
+            protocol_util.initiateSenderProtocolHeader(sendBuf,res->second.getID(),res->second.getTotalDataSize(), Protocol::protocolHeaderSize);
             protocol_util.setProtocolType(sendBuf,ProtocolType::RequestSend);      //设置报文类型
             protocol_util.setProtocolPhase(sendBuf,CommunicationPhase::Response); //设置为二阶段
             //计算当前的 piece 的大小
             uint16_t pieceDataPartSize = (k == (piece_count - 1))?last_piece_size: Protocol::defaultPieceLimitSize;
             protocol_util.setProtocolOrderAndSize(sendBuf, k, pieceDataPartSize);
-            std::memcpy(sendBuf + Protocol::protocolHeaderSize, response_start->data.get() + (k * Protocol::defaultPieceLimitSize), pieceDataPartSize); //body
+            std::memcpy(sendBuf + Protocol::protocolHeaderSize, res->second.data.get() + (k * Protocol::defaultPieceLimitSize), pieceDataPartSize); //body
             ::sendto(vir->socket_fd, sendBuf,  Protocol::protocolHeaderSize + pieceDataPartSize, 0,(struct sockaddr*)&(vir->addr), sizeof(vir->addr));
             SPDLOG_INFO("Sub-Reactor send data {} order {}", pieceDataPartSize, k);
+            res->second.setNewAckState(false);
         }
-        response_start->setNewAckState(false);
-        response_start++;
     }
 
+    void SubReactor::setResponseClearTimeout(VirtualConnection *vir, uint64_t _message_id) {
+        treeTimer.setTimeout(SubReactor::ResponseTimeOut.count(),&SubReactor::judgeResponseClearTimeout, this, vir, _message_id);
+    }
 
+    void SubReactor::judgeResponseClearTimeout(VirtualConnection *vir, uint64_t _message_id) {
+        if (vir->socket_fd != -1){
+            auto it= vir->responses.find(_message_id);
+            if (it != vir->responses.end()){
+                if (GetNowTick() - it->second.lastActive > SubReactor::ResponseTimeOut){
+                    vir->messages.remove(_message_id); //消息ID 也删除了
+                    vir->responses.erase(it);
+                    SPDLOG_INFO("Sub-Reactor kill response timeout timer for {}",_message_id );
+                }else{
+                    setResponseClearTimeout(vir, _message_id);
+                }
+            }
+        }
+    }
 }

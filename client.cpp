@@ -65,5 +65,18 @@ int main(int argc, char *argv[]){
     }else{
         std::printf("failed\n");
     }
+
+    auto ri = remix.call<int>("test_fun1", 590);
+    if (ri.isOK()){
+        std::cout << ri.value << std::endl;
+    }else{
+        if (ri.protocolReason == FailureReason::OK){
+            std::printf("rpc error\n");
+        }else{
+            std::printf("protocol error\n");
+        }
+    }
+
+
     return 0;
 }

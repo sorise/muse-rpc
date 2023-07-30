@@ -5,22 +5,13 @@
 #include <zlib.h>
 #include <map>
 #include "timer/timer_wheel.hpp"
-
-#include "rpc/protocol/protocol.hpp"
-#include "rpc/server/reactor.hpp"
-#include "rpc/server/registry.hpp"
-#include "rpc/logger/conf.hpp"
-#include "rpc/logger/conf.hpp"
-#include "rpc/server/reactor.hpp"
+#include "rpc/rpc.hpp"
 #include <functional>
 #include <utility>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "rpc/server/concurrent_registry.hpp"
-#include "rpc/server/reqeust.hpp"
+
 #include "thread_pool/pool.hpp"
-#include "rpc/server/middleware_channel.hpp"
-#include "rpc/server/route_service.hpp"
 
 using namespace muse::rpc;
 using namespace muse::pool;
@@ -49,8 +40,6 @@ private:
     int value;
     std::string name;
 };
-
-
 
 int test_fun1(int value){
     int i  = 10;
@@ -98,29 +87,33 @@ public:
     };
 };
 
+
 int main() {
+    //绑定方法的例子
     Normal normal(10, "remix");
 
-    ConcurrentRegistry concurrentRegistry;
-    Registry registry;
+    muse_bind_sync("normal", &Normal::addValue, &normal);
+    muse_bind_async("test_fun1", test_fun1);
+    muse_bind_async("test_fun2", test_fun2);
 
-    concurrentRegistry.Bind("normal", &Normal::addValue, &normal);
-    registry.Bind("test_fun1", test_fun1);
-    registry.Bind("test_fun2", test_fun2);
+    //注册中间件
+    MiddlewareChannel::configure<ZlibService>();  //解压缩
+    MiddlewareChannel::configure<RouteService>(Singleton<Registry>(), Singleton<ConcurrentRegistry>()); //方法的路由
 
-    MiddlewareChannel::ConfigureMiddleWare<RouteService>(&registry, &concurrentRegistry);
-
-    GetThreadPoolSingleton(); //启动线程池
-
+    //启动线程池
+    GetThreadPoolSingleton();
     // 启动日志
     InitSystemLogger();
-    // 反应堆
-    Reactor reactor(15000, 1,1500, ReactorRuntimeThread::Asynchronous);
+    // 开一个线程启动反应堆,等待请求
+    Reactor reactor(15000, 2,1500, ReactorRuntimeThread::Asynchronous);
+
     try {
+        //开始运行
         reactor.start();
     }catch (const ReactorException &ex){
         SPDLOG_ERROR("Main-Reactor start failed!");
     }
+
     std::cin.get();
-    spdlog::default_logger()->flush();
+    spdlog::default_logger()->flush(); //刷新日志
 }

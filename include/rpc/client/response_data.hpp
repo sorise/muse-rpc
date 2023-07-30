@@ -54,6 +54,7 @@ namespace muse::rpc{
         ResponseDataFactory(ResponseDataFactory &&) noexcept ;
         ResponseDataFactory(const ResponseDataFactory &other) noexcept ;
         explicit ResponseDataFactory(std::shared_ptr<std::pmr::synchronized_pool_resource> _pool);
+        std::shared_ptr<std::pmr::synchronized_pool_resource> getPool();
         ResponseData getResponseData();
     };
 

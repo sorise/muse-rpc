@@ -8,7 +8,6 @@ namespace muse::rpc{
     Response::Response(uint64_t _id, uint16_t _port, uint32_t _ip, uint16_t _pieces, uint32_t _data_size, std::shared_ptr<char[]>  _data):
     Servlet(_id, _port, _ip),
     data(_data),
-    is_data_prepared(false),
     ack_accept(0),
     piece_count(_pieces),
     total_data_size(_data_size),

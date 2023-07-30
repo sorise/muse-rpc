@@ -13,7 +13,7 @@ namespace muse::rpc{
         int socket_fd { -1 };
         std::chrono::milliseconds last_active {0};
         sockaddr_in addr;
-        std::list<Response> responses { };
+        std::unordered_map<uint64_t,Response> responses { };
         std::list<uint64_t> messages { };
     };
 }

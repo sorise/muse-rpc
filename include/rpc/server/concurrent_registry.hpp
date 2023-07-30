@@ -8,7 +8,7 @@
 #include <thread>
 #include <mutex>
 #include <memory>
-
+#include <functional>
 using namespace muse::serializer;
 //RPC 服务器方法的注册中心
 namespace muse::rpc{

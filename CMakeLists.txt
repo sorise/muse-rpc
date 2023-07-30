@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 project(muse-rpc
         VERSION         0.0.1
@@ -22,7 +22,7 @@ add_library(timer SHARED
         ${CMAKE_SOURCE_DIR}/include/timer/timer_tree.cpp
 )
 
-add_library(threads SHARED
+add_library(museThreads SHARED
         ${CMAKE_SOURCE_DIR}/include/thread_pool/executor.cpp
         ${CMAKE_SOURCE_DIR}/include/thread_pool/conf.cpp
         ${CMAKE_SOURCE_DIR}/include/thread_pool/pool.cpp
@@ -41,6 +41,7 @@ add_library(rpc SHARED
         ${CMAKE_SOURCE_DIR}/include/rpc/server/rpc_response_header.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/middleware_channel.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/route_service.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/zlib_service.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/concurrent_registry.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/response_data.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/invoker.cpp
@@ -50,7 +51,7 @@ add_library(rpc SHARED
 )
 
 target_link_libraries(rpc
-        PUBLIC serializer threads timer
+        PUBLIC serializer museThreads timer z
 )
 
 #查找需要的库在不在
@@ -69,16 +70,22 @@ add_executable(muse main.cpp)
 add_executable(client client.cpp)
 add_executable(call bind.cpp)
 
-target_link_libraries(muse
+target_link_libraries(call
         PUBLIC z
+)
+
+target_link_libraries(muse
         PUBLIC rpc
 )
 
 target_link_libraries(call PUBLIC serializer)
 
 target_link_libraries(client
-    PUBLIC rpc
+        PUBLIC rpc
 )
+
+#add thread only linux gcc
+set(CMAKE_CXX_FLAGS "${CAMKE_CXX_FLAGS} -std=c++17 -pthread")
 
 # 启动单元测试
 enable_testing()

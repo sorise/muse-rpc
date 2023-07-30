@@ -56,7 +56,7 @@ namespace muse::rpc{
 
         template<typename M, typename ...Argc>
         static typename std::enable_if<std::is_base_of<middleware_service, M>::value, void>::type
-        ConfigureMiddleWare(Argc&& ...argc) {
+        configure(Argc&& ...argc) {
             MiddlewareChannel::GetInstance()->Register<M>(argc...);
         }
 

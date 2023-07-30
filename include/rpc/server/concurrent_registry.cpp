@@ -17,7 +17,7 @@ namespace muse::rpc{
     }
 
     bool ConcurrentRegistry::check(const std::string &name) {
-        return concurrent_dictionary.find(name) == concurrent_dictionary.end();
+        return concurrent_dictionary.find(name) != concurrent_dictionary.end();
     }
 
     Controller::Controller(std::function<void(BinarySerializer *)>&& f)

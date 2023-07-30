@@ -6,14 +6,7 @@
 - 支持中间件配置
 - 目前采用的IO复用方式是同步IO epoll 模型，仅支持 linux(后续会增加 select 以支持windows平台)。
 - 支持数据压缩
-
-
-
-**架构图**：
-
-<img src="./docs/assets/wesrpc.jpg" width="1200px" />
-
-
+- 基于UDP 可以实现网络穿透、不需要三次握手
 
 #### 依赖库
 - [zlib](https://github.com/madler/zlib)：支持多种压缩算法、应用广泛、是事实上的业界标准的压缩库，需要在机器上提前安装。
@@ -23,13 +16,18 @@
 - [muse-serializer](https://github.com/sorise/muse-serializer)：一个实现简单的二进制序列化器。
 - [muse-timer](https://github.com/sorise/muse-timer) ：小型的定时器，提供了红黑树定时器和时间轮定时器。
 
+**架构图**：
+
+<img src="./docs/assets/wesrpc.jpg" width="1200px" />
+
+
 #### 配置启动
-配置启动如下所示，基本配置如下！
+基本配置内容如下所示
 
 ```c++
 int main() {
     //绑定方法的例子
-    Normal normal(10, "remix"); //用户自定义函数
+    Normal normal(10, "remix"); //用户自定义类
     
     // 方法注册
     

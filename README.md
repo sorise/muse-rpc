@@ -32,7 +32,7 @@ cd build
 
 **架构图**：
 
-<img src="./docs/assets/wesrpc.jpg" width="900px" />
+<img src="./docs/assets/rpcNew.jpg" width="900px" />
 
 ### 1. 基本使用方法
 

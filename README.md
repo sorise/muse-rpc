@@ -184,7 +184,7 @@ muse_bind_async("test_fun2", test_fun2);
 
 #### 1.3 客户端请求
 
-客户端使用 Client 对象，它会返回一个 **Outcome\<R\> ** 对象 ，isOK方法将指示是否返回成功！如果返回false，其成员protocolReason将指示是否是网络出现异常，response成员将会指示是否是rpc请求，响应错误。
+客户端使用 Client 对象，它会返回一个 **Outcome\<R\>** 对象 ，isOK方法将指示是否返回成功！如果返回false，其成员protocolReason将指示是否是网络出现异常，response成员将会指示是否是rpc请求，响应错误。
 
 ```cpp
 #include "rpc/client/client.hpp"
@@ -220,19 +220,24 @@ std::cout << ri.value << std::endl; // 600
 auto resp = remix.call<int>("test_fun1", 590);
 
 if (resp.isOK()){
+    //调用成功
     std::cout <<"request success\n" << std::endl; // 600
     std::cout << ri.value << std::endl; // 600
 }else{
+	//调用失败
     if (resp.protocolReason == FailureReason::OK){
+      	//错误原因是RPC错误
         std::printf("rpc error\n");
-        std::cout << resp.response.getReason() << std::endl; //错误原因
+        std::cout << resp.response.getReason() << std::endl; 
+        //返回 int 值对应 枚举 RpcFailureReason
     }else{
+      	//错误原因是网络通信过程中的错误        
         std::printf("internet error\n");
         std::cout << (short)resp.protocolReason << std::endl; //错误原因
     }
 }
 
-//resp.response.getReason() 返回 枚举FailureReason 
+//resp.protocolReason() 返回 枚举FailureReason 
 enum class FailureReason: short {
     OK, //没有失败
     TheServerResourcesExhausted, //服务器资源耗尽，请勿链接
@@ -258,7 +263,7 @@ enum class RpcFailureReason:int{
 
 **介绍**：简单请求响应协议（SR2P 协议），是一种两阶段协议，专门为 RPC 定制，分为请求和响应两个阶段不需要建立链接。
 
-协议字段如下所示，协议头是26字节，准许标准，采用大端序，由于MTU的限制，网络标准MTU为576，协议体数据部分最大为522字节。更多请看 [Protocol.md](./docs/Protocol.md)。
+协议字段如下所示，协议头是26字节，字段字节序采用大端序，数据部分是小端序，由于MTU的限制，网络标准MTU为576，数据部分最大为522字节，更多请看 [Protocol.md](./docs/Protocol.md)。
 
 <img src="./docs/assets/protocol.jpg" width="1000px" >
 

@@ -12,10 +12,12 @@
 **目前使用方法**：
 
 ```shell
-#需要提前安装zlib库
+# 需要提前安装zlib库
+# 本人开发环境  GCC 11.3  CMake 3.25 clion ubuntu 22.04
 git clone git@github.com:sorise/muse-rpc.git
 cd muse-rpc
 cmake -S . -B build
+cmake --build 
 cd build
 ./muse   #启动
 ```
@@ -265,7 +267,6 @@ enum class RpcFailureReason:int{
 * **CommunicationPhase**  协议阶段，4位
   * Request 阶段 0
   * Response 阶段 1
-
 * **ProtocolType** 4位
   * RequestSend ,   纯数据报文
   * ReceiverACK , 接收方确认数据
@@ -275,8 +276,6 @@ enum class RpcFailureReason:int{
   * UnsupportedNetworkProtocol 网络数据格式不正确
   * StateReset  没有这个链接
   * TheServerResourcesExhausted  服务器资源已经耗尽
-
-
 * **pieceOrder** 分片序号，2个字节
 * **pieceSize** 总共有多少个分片 ，2个字节
 * **acceptMinOrder**  发送数据端希望收到的确认号 **暂未使用**，2个字节
@@ -290,6 +289,6 @@ enum class RpcFailureReason:int{
 
 SR2P协议会根据发生数据的多少决定每次发生几个数据报，下面以一次2个为例，在基本正常情况下的请求流程图：
 
-<img src="./docs/assets/xiexi.jpg" width="500px" >
+<img src="./docs/assets/xiyio.jpg" width="500px" >
 
 其他情况的处理过程详细请查看 [Protocol.md](./docs/Protocol.md) 文档

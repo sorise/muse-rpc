@@ -11,17 +11,19 @@
 
 
 ```cpp
- ProtocolHeader{
+//协议头 结构体
+struct ProtocolHeader{
     // 八 字节
     uint8_t synchronousWord;          // 1 同步字  全1111 0000
-    uint8_t versionAndType;           // 1 协议版本 和 类型
+    CommunicationPhase phase;          // 1 协议阶段
+    ProtocolType type;                // 1 协议类型
     uint16_t pieceOrder;              // 2 序号
-    uint16_t pieceSize;               // 2 当前分片多少个字节数，数据部分的大小
+    uint16_t pieceSize;               // 2 当前分片的数据部分有多少个字节
     uint16_t acceptMinOrder;          // 2 发送数据端希望收到的确认号
     // 八 字节
     uint64_t timePoint;               // 8 区分不同的包 报文 ID
     // 八 字节
-    uint16_t totalCount;              // 2 总共有多少个包
+    uint16_t totalCount;                   // 2 总共有多少个包
     uint16_t pieceStandardSize ;      // 2 标准大小
     uint32_t totalSize;               // 4 UDP完整报文的大小
     // 二 字节

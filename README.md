@@ -274,12 +274,12 @@ enum class RpcFailureReason:int{
   * Response 阶段 1
 * **ProtocolType** 4位
   * RequestSend ,   纯数据报文
-  * ReceiverACK , 接收方确认数据
+  * ReceiverACK , 接收方确认ACK
   * RequestACK ，请求ACK 确认
   * TimedOutRequestHeartbeat  心跳请求，报文还在处理吗
   * TimedOutResponseHeartbeat  心跳响应
   * UnsupportedNetworkProtocol 网络数据格式不正确
-  * StateReset  没有这个链接
+  * StateReset  没有这个报文记录，这是过期数据
   * TheServerResourcesExhausted  服务器资源已经耗尽
 * **pieceOrder** 分片序号，2个字节
 * **pieceSize** 总共有多少个分片 ，2个字节

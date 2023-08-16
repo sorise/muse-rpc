@@ -49,8 +49,8 @@ namespace muse::serializer{
     };
     BinarySerializer::~BinarySerializer()  = default;
 
-    BinarySerializer::BinarySerializer(BinarySerializer &&other) noexcept  {
-        byteStream = std::move(other.byteStream); //容器必须支持移动
+    BinarySerializer::BinarySerializer(BinarySerializer &&other) noexcept
+    : byteStream(std::move(other.byteStream)){
         readPosition = other.readPosition;
         byteSequence = other.byteSequence;
 

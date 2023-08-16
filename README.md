@@ -92,6 +92,29 @@ int main() {
 
 
 #### 1.2 Server 注册方法
+使用宏 **muse_bind_sync** 和 **muse_bind_async**。前者是调用 SynchronousRegistry  后者是调用 Registry ,原型如下所示。
+
+```cpp
+#include <iostream>
+#include "rpc/rpc.hpp"
+
+using namespace muse::rpc;
+using namespace muse::pool;
+using namespace std::chrono_literals;
+
+//绑定方法的例子
+Normal normal(10, "remix");
+
+// 绑定类的成员函数、使用 只同步方法 绑定
+muse_bind_sync("normal", &Normal::addValue, &normal);
+// 绑定函数指针
+muse_bind_async("test_fun1", test_fun1);
+// 绑定 lambda 表达式
+muse_bind_async("lambda test", [](int val)->int{
+    printf("why call me \n");
+    return 10 + val;
+});
+```
 
 在服务端注册方法需要使用到 Registry 和 SynchronousRegistry 对象，
 
@@ -117,10 +140,7 @@ private:
 
 
 
-**注册方法**
-
-* 使用宏 **muse_bind_sync** 和 **muse_bind_async**。前者是调用 SynchronousRegistry  后者是调用 Registry ,原型如下所示。
-
+**注册方法** ： 两个宏的定义如下所示
 ```cpp
 #define muse_bind_async(...) \
     Singleton<Registry>()->Bind(__VA_ARGS__);
@@ -129,57 +149,6 @@ private:
 #define muse_bind_sync(...) \
     Singleton<SynchronousRegistry>()->Bind(__VA_ARGS__);
 ```
-
-使用：
-
-```cpp
-#include <iostream>
-#include "rpc/rpc.hpp"
-
-using namespace muse::rpc;
-using namespace muse::pool;
-using namespace std::chrono_literals;
-
-class Normal{
-public:
-    Normal(int _value, std::string  _name)
-            :value(_value), name(std::move( _name)){}
-
-    std::string setValueAndGetName(int _new_value){
-        this->value = _new_value;
-        return this->name;
-    }
-
-    int getValue() const{
-        return this->value;
-    }
-
-    void addValue(){
-        printf("\n add 1  \n");
-        this->value++;
-    }
-
-private:
-    int value;
-    std::string name;
-};
-
-int test_fun1(int value){
-    int i  = 10;
-    return i + value;
-}
-
-std::vector<double> test_fun2(const std::vector<double>& scores){
-    return scores;
-}
-
-Normal normal(10, "remix"); //用户自定义类
-
-muse_bind_sync("normal", &Normal::addValue, &normal); //绑定成员函数
-muse_bind_async("test_fun1", test_fun1); // test_fun1、test_fun2 是函数指针
-muse_bind_async("test_fun2", test_fun2);
-```
-
 
 
 #### 1.3 客户端请求

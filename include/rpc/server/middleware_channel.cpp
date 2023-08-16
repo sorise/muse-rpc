@@ -42,4 +42,30 @@ namespace muse::rpc{
         }
         return temp;
     }
+
+    std::tuple<std::shared_ptr<char[]>, size_t, std::shared_ptr<std::pmr::synchronized_pool_resource>>
+    MiddlewareChannel::ClientIn(std::shared_ptr<char[]> data, size_t data_size,
+                               std::shared_ptr<std::pmr::synchronized_pool_resource> _memory_pool) {
+        std::tuple<std::shared_ptr<char[]>, size_t, std::shared_ptr<std::pmr::synchronized_pool_resource>> temp(data, data_size, _memory_pool);
+        if (services.size() > 1){
+            for (int i = 0; i < services.size() - 1; ++i) {
+                temp = services[i]->In(std::get<0>(temp),std::get<1>(temp),std::get<2>(temp));
+            }
+        }
+        return temp;
+    }
+
+    std::tuple<std::shared_ptr<char[]>, size_t, std::shared_ptr<std::pmr::synchronized_pool_resource>>
+    MiddlewareChannel::ClientOut(std::shared_ptr<char[]> data, size_t data_size,
+                                 std::shared_ptr<std::pmr::synchronized_pool_resource> _memory_pool) {
+        std::tuple<std::shared_ptr<char[]>, size_t, std::shared_ptr<std::pmr::synchronized_pool_resource>> temp(data, data_size, _memory_pool);
+        if (services.size() > 1){
+            for (int i = services.size() - 2; i >= 0 ; i--) {
+                temp = services[i]->Out(std::get<0>(temp),std::get<1>(temp),std::get<2>(temp));
+            }
+        }
+        return temp;
+    }
+
+
 }

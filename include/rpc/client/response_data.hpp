@@ -8,7 +8,12 @@
 #include <vector>
 #include <memory>
 #include <memory_resource>
-#include "invoker.hpp"
+#include "invoker_exception.hpp"
+#include "../logger/conf.hpp"
+#include "../memory/conf.hpp"
+#include "../protocol/communication_phase.h"
+#include "../protocol/protocol.hpp"
+
 namespace muse::rpc{
 
     enum class FailureReason: short {
@@ -18,15 +23,13 @@ namespace muse::rpc{
         TheRunningLogicOfTheServerIncorrect, //服务器运行逻辑错误，返回的报文并非所需
     };
 
-    class ResponseData {
+    class ResponseData{
     public:
-        friend class Invoker;
-    private:
         uint64_t            message_id;
         std::vector<bool>   piece_state;    //各个分片的状态
         uint16_t            piece_count;
         uint32_t            total_size;
-        bool is_initial{};
+        bool is_initial{false};
         bool isSuccess {false};
         FailureReason reason{ FailureReason::OK };
         std::shared_ptr<std::pmr::synchronized_pool_resource> pool;
@@ -35,8 +38,12 @@ namespace muse::rpc{
         bool getPieceState(const uint16_t & _idx) const;
         uint16_t setPieceState(const uint16_t & _index, bool value);
     public:
+        void set_success(const bool & suc);
+        bool get_success() const;
+
         std::shared_ptr<char[]>  data {nullptr};
 
+        ResponseData();
         explicit ResponseData(std::shared_ptr<std::pmr::synchronized_pool_resource> _pool);
         ResponseData(const ResponseData& other);
         ResponseData(ResponseData&& other) noexcept;

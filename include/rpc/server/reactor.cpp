@@ -2,21 +2,8 @@
 // Created by remix on 23-7-17.
 //
 #include "reactor.hpp"
-#include "spdlog/spdlog.h"
 
 namespace muse::rpc{
-
-    std::shared_ptr<std::pmr::synchronized_pool_resource> getMemoryPool(size_t _largest_required_pool_block, size_t _max_blocks_per_chunk){
-        try {
-            std::pmr::pool_options option;
-            option.largest_required_pool_block = _largest_required_pool_block; //5M
-            option.max_blocks_per_chunk = _max_blocks_per_chunk; //每一个chunk有多少个block
-            return std::make_shared<std::pmr::synchronized_pool_resource>(option);
-        }catch (const std::exception &ex){
-            SPDLOG_ERROR("memory pool create error, what(): {}", ex.what() );
-            throw ReactorException("[getMemoryPool]", ReactorError::MemoryPoolCreateFailed);
-        }
-    }
 
     /* 构造函数 */
     Reactor::Reactor(uint16_t _port,uint32_t _sub_reactor_count,uint32_t _open_max_connection, ReactorRuntimeThread _type):
@@ -114,11 +101,30 @@ namespace muse::rpc{
                     //收到新链接
                     sockaddr_in addr{};
                     socklen_t len = sizeof(addr);
+
                     //读取数据
                     auto recvLen = recvfrom(epollQueue[i].data.fd, dp, bufferSize, 0 ,(struct sockaddr*)&addr, &len);
                     SPDLOG_INFO("Main-Reactor receive new udp connection from ip {} port {}" ,inet_ntoa(addr.sin_addr)  ,ntohs(addr.sin_port));
-                    //不需要解析内容，只需要丢给 sub-reactor
 
+                    bool isSuccess = false;
+                    auto header = protocol.parse(dt.get(), recvLen, isSuccess);
+                    if (!isSuccess){
+                        //协议格式不正确
+                        std::string message {"Please use the correct network protocol！\n"};
+                        sendto(socketFd, message.c_str() , sizeof(char)*message.size(),0, (struct sockaddr*)&addr, sizeof(addr));
+                        continue; //直接下一个
+                    }
+                    //创建 一个三元组
+                    Peer peer(ntohs(addr.sin_port), ntohl(addr.sin_addr.s_addr));
+                    //查找
+                    auto it= GlobalEntry::con_queue->find(peer);
+                    if (it != GlobalEntry::con_queue->end()){
+                        //已经创建连接了
+                        //subs[it->second.SubReactor_index]->acceptConnection(-1, recvLen, addr, dt);
+                        SPDLOG_INFO("directly send data to sub reactor because vir connection is build!");
+                        continue;
+                    }
+                    //真新链接、建立链接
                     int sonSocketFd = -1;
                     if ((sonSocketFd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
                         SPDLOG_WARN("Main-Reactor create connect udp socket failed， errno: {}", errno);
@@ -136,19 +142,28 @@ namespace muse::rpc{
                             SPDLOG_ERROR("son socket connect ip {} port {} failed, errno {}",inet_ntoa(addr.sin_addr), ntohs(port), errno);
                         } else {
                             //成功链接，丢给 从反应堆
-                            size_t idx = counter % subReactorCount;
+                            uint32_t idx = counter % subReactorCount;
                             counter++;
                             SPDLOG_INFO("Main-Reactor send connection to {} sub reactor",idx);
                             auto result = subs[idx]->acceptConnection(sonSocketFd, recvLen, addr, dt);
                             if (!result){
                                 SPDLOG_WARN("Sub Reactor has been stopped!");
                                 close(sonSocketFd);
+                            }else{
+                                GlobalEntry::con_queue->insert_or_assign(peer, SocketConnection{sonSocketFd, idx} );
                             }
                         }
                     }
                 }
             }
+            {
+                std::lock_guard<std::mutex> lock(GlobalEntry::mtx);
+                GlobalEntry::timerTree->runTask();
+            }
+            //处理定时器任务
         }
+
+        SPDLOG_INFO("Sub -Reactor die!");
     }
 
     void Reactor::stop() noexcept {

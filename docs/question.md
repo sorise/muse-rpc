@@ -38,3 +38,7 @@ int main() {
 * 如果必须要定义一个非静态成员变量，那么可以通过注解 @Scope(“prototype”) 将Controller设置为多例模式。
 * Controller 中使用 ThreadLocal 变量。每一个线程都有一个变量的副本。
 * Spring本身并没有解决并发访问的问题。
+
+#### 问题 6 定时器导致死锁
+
+#### 问题 7 tcache_thread_shutdown(): unaligned tcache chunk detected

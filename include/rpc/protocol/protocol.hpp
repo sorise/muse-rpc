@@ -40,7 +40,7 @@ namespace muse::rpc{
     private:
         muse::serializer::ByteSequence by; //当前主机的字节序
     public:
-        muse::serializer::ByteSequence getByteSequence();
+        muse::serializer::ByteSequence get_byte_sequence();
 
         Protocol();
         // 协议头大小

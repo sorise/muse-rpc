@@ -1,13 +1,15 @@
 //
 // Created by remix on 23-7-16.
 //
-
 #ifndef MUSE_SERVER_RPC_HPP
 #define MUSE_SERVER_RPC_HPP
 #include "protocol/protocol.hpp"
 #include "logger/conf.hpp"
 #include "memory/conf.hpp"
 #include "client/client.hpp"
+#include "client/outcome.hpp"
+#include "client/transmitter.hpp"
+#include "client/transmitter_event.hpp"
 #include "server/registry.hpp"
 #include "server/synchronous_registry.hpp"
 #include "server/reactor.hpp"
@@ -18,6 +20,7 @@
 #include "server/middleware_channel.hpp"
 #include "server/middleware_service.hpp"
 #include "server/virtual_connection.hpp"
+
 
 //异步方法，也就是当前方法可以同时被多个线程同时执行
 #define muse_bind_async(...) \
@@ -34,6 +37,5 @@ namespace muse::rpc{
         return instance;
     }
 }
-
 
 #endif //MUSE_SERVER_RPC_HPP

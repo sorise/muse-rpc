@@ -16,11 +16,10 @@
 #include "response_data.hpp"
 #include "../server/zlib_service.hpp"
 #include "../memory/conf.hpp"
+#include "../server/middleware_channel.hpp"
+
 //阻塞模式
 namespace muse::rpc{
-    class ResponseData;
-    class ResponseDataFactory;
-
     //家庭小作坊模式
     class Invoker {
     public:
@@ -31,7 +30,6 @@ namespace muse::rpc{
         static constexpr long WaitingTimeout = 600000; //0.6s
         static constexpr int tryTimes = 3;
     private:
-        ZlibService zlib_service;
         struct sockaddr_in server_address{};
         int socket_fd;
         Protocol protocol{};
@@ -46,10 +44,7 @@ namespace muse::rpc{
         void setSocket(int _socket_fd);
         ResponseData request(const char *_data, size_t data_size, ResponseDataFactory factory);
         ~Invoker();
-
     };
-
-
 }
 
 

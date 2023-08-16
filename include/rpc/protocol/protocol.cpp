@@ -310,8 +310,8 @@ namespace muse::rpc{
         }
     }
 
-    Protocol::Protocol():by(getByteSequence()){
-
+    Protocol::Protocol(){
+        by = muse::serializer::getByteSequence();
     }
 
     void Protocol::setProtocolPhase(char *protocol, CommunicationPhase _phase) {
@@ -362,7 +362,7 @@ namespace muse::rpc{
         }
     }
 
-    muse::serializer::ByteSequence Protocol::getByteSequence() {
+    muse::serializer::ByteSequence Protocol::get_byte_sequence() {
         return this->by;
     }
 

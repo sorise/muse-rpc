@@ -6,12 +6,12 @@
 
 namespace muse::rpc{
     /* 异常构造函数 */
-    InvokerException::InvokerException(const std::string &arg, InvokerError number)
+    ClientException::ClientException(const std::string &arg, ClientError number)
             :logic_error(arg), errorNumber(number) {
     }
 
     /* 获取错误号 */
-    InvokerError InvokerException::getErrorNumber() {
+    ClientError ClientException::getErrorNumber() {
         return errorNumber;
     }
 }

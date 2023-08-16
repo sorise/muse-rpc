@@ -3,12 +3,10 @@
 
 ----
 
-
 ### [一、协议字段及其意义](#)
 协议可视化内容
 
-<img src="./assets/protocol.jpg" width="1000px" >
-
+<img src="./assets/protocol_zh.jpg" width="1000px" >
 
 ```cpp
 //协议头 结构体
@@ -70,6 +68,8 @@ Response阶段：**server 向 client 发送响应数据**
 |          | RequestACK                | ReceiverACK               |
 |          | TimedOutRequestHeartbeat  | TimedOutResponseHeartbeat |
 |          | TimedOutResponseHeartbeat | TimedOutRequestHeartbeat  |
+|          | RequestSend | TimedOutRequestHeartbeat  |
 |          | 发送完毕                      | StateReset                |
 
 ### [2. 交互过程](#)
+前向声明的类或者结构体只能用来定义指针或者引用。

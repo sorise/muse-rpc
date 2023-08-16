@@ -12,7 +12,7 @@ namespace muse::rpc{
     ZlibService::In(std::shared_ptr<char[]> data, size_t data_size,
                     std::shared_ptr<std::pmr::synchronized_pool_resource> _memory_pool) {
         uint32_t originalSize = *(reinterpret_cast<uint32_t*>(data.get())); //极限就是这么大 UINT32_MAX
-        if (protocol.getByteSequence() == serializer::ByteSequence::BigEndian){
+        if (protocol.get_byte_sequence() == serializer::ByteSequence::BigEndian){
             char* first = reinterpret_cast<char*>(&originalSize); //特殊转换 变成
             char* last = first + sizeof(uint32_t);
             std::reverse(first, last);
@@ -27,18 +27,18 @@ namespace muse::rpc{
         }
         return std::make_tuple(buffer ,outDesSize ,_memory_pool);
     }
-
+    // 11 40 00 40
     //压缩
     std::tuple<std::shared_ptr<char[]>, size_t, std::shared_ptr<std::pmr::synchronized_pool_resource>>
     ZlibService::Out(std::shared_ptr<char[]> data, size_t data_size, std::shared_ptr<std::pmr::synchronized_pool_resource> _memory_pool){
         uLongf desSize = compressBound(data_size);
         auto len_flag_size = sizeof(uint32_t);
         std::shared_ptr<char[]> destOutBuffer( (char*)_memory_pool->allocate(desSize + len_flag_size), [=](char *ptr){
-            _memory_pool->deallocate(ptr, desSize);
+            _memory_pool->deallocate(ptr, desSize + len_flag_size);
         });
 
         uint32_t save_size = data_size; //极限就是这么大 UINT32_MAX
-        if (protocol.getByteSequence() == serializer::ByteSequence::BigEndian){
+        if (protocol.get_byte_sequence() == serializer::ByteSequence::BigEndian){
             std::memcpy(destOutBuffer.get(), (char *)&save_size, len_flag_size);
             char* first = destOutBuffer.get(); //特殊转换 变成
             char* last = first + sizeof(uint32_t);

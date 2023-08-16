@@ -53,17 +53,33 @@ namespace muse::timer{
         return diff > 0? diff:0;
     }
 
-    bool TimerTree::runTask(){
+    bool TimerTree::runOneTask(){
         if (!nodes.empty()){
             auto it = nodes.begin();
             time_t diff = it->getExpire() - TimerTree::GetTick();
             if (diff <= 0){
                 it->callBack(); //调用 会不会有异常啊
-                nodes.erase(it);
+                nodes.erase(*it);
                 return true;
             }
         }
         return false;
     }
 
+    bool TimerTree::runTask(){
+        bool isRun = false;
+        auto tick = TimerTree::GetTick();
+        while (!nodes.empty()){
+            auto it = nodes.begin();
+            time_t diff = it->getExpire() - tick;
+            if (diff <= 0){
+                it->callBack(); //调用 会不会有异常啊
+                isRun = true;
+                nodes.erase(it);
+            }else{
+                break;
+            }
+        }
+        return isRun;
+    }
 }

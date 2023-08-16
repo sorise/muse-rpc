@@ -50,7 +50,7 @@ namespace muse::timer{
         /* 获得时间唯一ID */
         static uint64_t GenTimeTaskID();
     public:
-        //添加到树上
+        //添加到树上 milliseconds 是毫秒数
         template<class F, class ...Args >
         TimeNodeBase setTimeout(long long milliseconds, F && f, Args&... args){
             TimeNode::CallBack callBack = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
@@ -59,7 +59,7 @@ namespace muse::timer{
             return static_cast<TimeNodeBase>(tNode);
         }
 
-        //添加到树上
+        //添加到树上 milliseconds 是毫秒数
         template<typename F,typename R,  typename ...Args>
         TimeNodeBase setTimeout(long long milliseconds, F&& f, R& r,  Args&&... args){
             TimeNode::CallBack callBack = std::bind(std::forward<F>(f) , std::ref(r) ,std::forward<Args>(args)...);
@@ -68,7 +68,7 @@ namespace muse::timer{
             return static_cast<TimeNodeBase>(tNode);
         }
 
-        //添加到树上
+        //添加到树上 milliseconds 是毫秒数
         template<typename F,typename R,  typename ...Args>
         TimeNodeBase setTimeout(long long milliseconds, F&& f, R* r,  Args&&... args){
             TimeNode::CallBack callBack = std::bind(std::forward<F>(f), r ,std::forward<Args>(args)...);
@@ -82,6 +82,9 @@ namespace muse::timer{
 
         /* 返回还有多久时间才有时间进行触发 */
         time_t checkTimeout();
+
+        //只运行一个任务
+        bool runOneTask();
 
         /* 执行任务 */
         bool runTask();

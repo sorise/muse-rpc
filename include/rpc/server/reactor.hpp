@@ -22,7 +22,8 @@
 #include "reactor_exception.hpp"
 #include "sub_reactor.hpp"
 #include "../memory/conf.hpp"
-
+#include "global_entry.hpp"
+#include "spdlog/spdlog.h"
 
 /* 主要负责建立链接 */
 namespace muse::rpc{
@@ -49,21 +50,20 @@ namespace muse::rpc{
         uint32_t counter;
         uint32_t openMaxConnection;
         std::vector<std::unique_ptr<SubReactor>> subs;                  // 从反应堆s
+        Protocol protocol;
+    private:
+        /* 启动从反应堆 */
         void startSubReactor();
     public:
-
         Reactor(uint16_t _port, uint32_t _sub_reactor_count, uint32_t _open_max_connection, ReactorRuntimeThread _type);
-
         Reactor(const Reactor &other) = delete; //拷贝也不行
         Reactor(Reactor &&other) = delete;  //移动也不允许
         Reactor& operator =(const Reactor &other) = delete;
         Reactor& operator =(Reactor &&other) = delete;
-
-        void start();
-        /* 首先关闭主反应堆，再关闭从反应堆 */
+        void start();                                                   // 首先关闭主反应堆，再关闭从反应堆
         void stop() noexcept;
-
         virtual ~Reactor();
     };
+
 }
 #endif //MUSE_SERVER_REACTOR_HPP

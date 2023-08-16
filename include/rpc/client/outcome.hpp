@@ -5,6 +5,7 @@
 #ifndef MUSE_RPC_OUTCOME_HPP
 #define MUSE_RPC_OUTCOME_HPP
 #include "../server/rpc_response_header.hpp"
+#include "response_data.hpp"
 
 namespace muse::rpc{
     template<typename R>
@@ -21,10 +22,6 @@ namespace muse::rpc{
         FailureReason protocolReason {FailureReason::OK};
         bool isOK() const;
     };
-
-    bool Outcome<void>::isOK() const{
-        return response.getOkState() && (protocolReason == FailureReason::OK);
-    }
 
     template<typename R>
     bool Outcome<R>::isOK() const{

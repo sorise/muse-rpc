@@ -42,11 +42,17 @@ add_library(rpc SHARED
         ${CMAKE_SOURCE_DIR}/include/rpc/server/middleware_channel.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/route_service.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/zlib_service.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/peer.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/synchronous_registry.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/global_entry.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/response_data.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/invoker.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/client.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/invoker_exception.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/client/transmitter.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/client/outcome.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/client/transmitter_event.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/client/global_id.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/memory/conf.cpp
 )
 
@@ -89,5 +95,6 @@ set(CMAKE_CXX_FLAGS "${CAMKE_CXX_FLAGS} -std=c++17 -pthread")
 
 # 启动单元测试
 enable_testing()
+
 # 进入单元测试
 add_subdirectory(tests)

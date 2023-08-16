@@ -57,7 +57,7 @@ namespace muse::rpc{
             return ((*c).*func)(std::get<Index>(std::forward<Tuple>(t))...);
         }
 
-        /* 函数有返回值 */
+        /* 非成员函数 有返回值 */
         template<typename R, typename ...Params>
         typename std::enable_if<!std::is_same<R, void>::value, void>::type
         callBind(std::function<R(Params...)> func, BinarySerializer *serializer){
@@ -72,7 +72,7 @@ namespace muse::rpc{
             }MUSE_REGISTRY_METHOD_CATCH()
         }
 
-        /* 函数无返回值 */
+        /* 非成员函数 无返回值 */
         template<typename R, typename ...Params>
         typename std::enable_if<std::is_same<R, void>::value, void>::type
         callBind(std::function<R(Params...)> func, BinarySerializer *serializer){
@@ -123,7 +123,7 @@ namespace muse::rpc{
 
         //函数成员指针
         template<typename R, typename... Params>
-        void callProxy(std::function<R(Params... ps)> func, BinarySerializer* serializer){
+        void callProxy(std::function<R(Params...)> func, BinarySerializer* serializer){
             callBind(func, serializer);
         }
 
@@ -145,12 +145,33 @@ namespace muse::rpc{
             callProxy(fun, c, serializer);
         }
 
+        template<typename F>
+        void lambdaProxy(F func, BinarySerializer* serializer){
+            lambdaHelper(std::function(func), serializer);
+        }
+
+        //函数成员指针
+        template<typename R, typename... Params>
+        void lambdaHelper(std::function<R(Params...)> func, BinarySerializer* serializer){
+            callBind(func, serializer);
+        }
+
     public:
         /* 普通可调用对象注册 */
         template<typename F>
-        bool Bind(const std::string& name, F func){
+        bool Bind(const std::string& name, F& func){
             if (dictionary.find(name) == dictionary.end()){
                 dictionary[name] = std::bind(&Registry::Proxy<F>, this, func, std::placeholders::_1);
+                return true;
+            }
+            return false;
+        }
+
+        /* lambda 可调用对象注册 */
+        template<typename F>
+        bool Bind(const std::string& name, F&& func){
+            if (dictionary.find(name) == dictionary.end()){
+               dictionary[name] = std::bind(&Registry::lambdaProxy<F>, this, std::forward<F>(func), std::placeholders::_1);
                 return true;
             }
             return false;

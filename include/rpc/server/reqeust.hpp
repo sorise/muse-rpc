@@ -23,6 +23,7 @@ namespace muse::rpc{
         return std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
     }
 
+
     class Servlet {
     public:
         friend bool operator <(const Servlet &me, const Servlet &other);
@@ -46,10 +47,10 @@ namespace muse::rpc{
         uint16_t                        piece_count;         // 有多少个分片
         uint32_t                        total_data_size;     // 总共有多少数据
         int                             socketFd {-1};       // socket
-        bool                            is_success;          //所有的数据都已经搞定了
+        bool                            is_success{false};          //所有的数据都已经搞定了
         bool                            is_trigger{false};   //是否触发过
     public:
-        std::chrono::milliseconds       active_dt;           // 上次活跃时间
+        std::chrono::milliseconds       active_dt {0};           // 上次活跃时间
         std::shared_ptr<char[]>         data;
         Request(uint64_t _id, uint16_t _port, uint32_t _ip, uint16_t _pieces, uint32_t _data_size);
         Request(const Request& other) = default;
@@ -60,9 +61,7 @@ namespace muse::rpc{
         void setSocket(int _socket_fd);
         uint16_t getAckNumber();
         int getSocket() const;
-        /*
-         * 防止多次触发处理事件
-         * */
+        /* 防止多次触发处理事件 */
         void trigger();
         bool getTriggerState() const;
     };

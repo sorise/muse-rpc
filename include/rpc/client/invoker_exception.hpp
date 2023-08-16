@@ -10,7 +10,7 @@
 
 namespace muse::rpc{
     /* 错误号 */
-    enum class InvokerError: short {
+    enum class ClientError: short {
         IPAddressError,
         CreateSocketError,                   //创建
         SocketFDError,                       //socket 是错误的
@@ -19,13 +19,13 @@ namespace muse::rpc{
     };
 
     /* 错误异常消息 */
-    class InvokerException: public std::logic_error{
+    class ClientException: public std::logic_error{
     public:
-        explicit InvokerException(const std::string &arg, InvokerError number);
-        ~InvokerException() override = default;
-        InvokerError getErrorNumber(); //返回错误号
+        explicit ClientException(const std::string &arg, ClientError number);
+        ~ClientException() override = default;
+        ClientError getErrorNumber(); //返回错误号
     private:
-        InvokerError errorNumber;
+        ClientError errorNumber;
     };
 }
 

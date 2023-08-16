@@ -41,7 +41,7 @@ namespace muse::rpc{
     struct Controller {
         std::mutex mtx;
         std::function<void(BinarySerializer*)> func;
-        Controller(std::function<void(BinarySerializer*)>&& f);
+        explicit Controller(std::function<void(BinarySerializer*)>&& f);
     };
 
     class SynchronousRegistry {
@@ -155,12 +155,32 @@ namespace muse::rpc{
             callProxy(fun, c, serializer);
         }
 
+        template<typename F>
+        void lambdaProxy(F func, BinarySerializer* serializer){
+            lambdaHelper(std::function(func), serializer);
+        }
+
+        //函数成员指针
+        template<typename R, typename... Params>
+        void lambdaHelper(std::function<R(Params...)> func, BinarySerializer* serializer){
+            callBind(func, serializer);
+        }
     public:
         /* 普通可调用对象注册 */
         template<typename F>
-        bool Bind(const std::string& name, F func){
+        bool Bind(const std::string& name, F& func){
             if (concurrent_dictionary.find(name) == concurrent_dictionary.end()){
                 concurrent_dictionary[name] = std::make_shared<Controller>(std::bind(&SynchronousRegistry::Proxy<F>, this, func, std::placeholders::_1));
+                return true;
+            }
+            return false;
+        }
+
+        /* lambda 可调用对象注册 */
+        template<typename F>
+        bool Bind(const std::string& name, F&& func){
+            if (concurrent_dictionary.find(name) == concurrent_dictionary.end()){
+                concurrent_dictionary[name] = std::make_shared<Controller>(std::bind(&SynchronousRegistry::lambdaProxy<F>, this, std::forward<F>(func), std::placeholders::_1));
                 return true;
             }
             return false;

@@ -6,7 +6,7 @@ namespace muse::rpc{
     Invoker::Invoker(const char * _ip_address, const uint16_t& port)
     :socket_fd(-1){
         if(1 != inet_aton(_ip_address,&server_address.sin_addr)){
-            throw InvokerException("ip address not right", InvokerError::IPAddressError);
+            throw ClientException("ip address not right", ClientError::IPAddressError);
         }
         server_address.sin_family = PF_INET;
         server_address.sin_port = htons(port);
@@ -16,7 +16,7 @@ namespace muse::rpc{
         setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tm, sizeof(struct timeval));
 
         if (socket_fd == -1) {
-            throw InvokerException("create the socket failed!", InvokerError::CreateSocketError);
+            throw ClientException("create the socket failed!", ClientError::CreateSocketError);
         }
     }
 
@@ -25,10 +25,10 @@ namespace muse::rpc{
         socket_fd = _socket_fd;
         ::memset((char *)&server_address, 0, sizeof(server_address));
         if (socket_fd <= 0){
-            throw InvokerException("socket not right", InvokerError::SocketFDError);
+            throw ClientException("socket not right", ClientError::SocketFDError);
         }
         if(1 != inet_aton(_ip_address,&server_address.sin_addr)){
-            throw InvokerException("ip address not right", InvokerError::IPAddressError);
+            throw ClientException("ip address not right", ClientError::IPAddressError);
         }
         server_address.sin_family = PF_INET;
         server_address.sin_port = htons(port);
@@ -39,7 +39,7 @@ namespace muse::rpc{
     void Invoker::setSocket(int _socket_fd) {
         socket_fd = _socket_fd;
         if (socket_fd <= 0){
-            throw InvokerException("socket not right", InvokerError::SocketFDError);
+            throw ClientException("socket not right", ClientError::SocketFDError);
         }
     }
 
@@ -53,12 +53,15 @@ namespace muse::rpc{
         }
         std::shared_ptr<char[]> data_share(const_cast<char*>(_data), [](char *ptr){  });
 
-        auto tpl = zlib_service.Out(data_share, data_size, factory.getPool());
+        auto tpl =  MiddlewareChannel::GetInstance()->ClientOut(data_share, data_size, factory.getPool());
+        //auto tpl =  zlib_service.Out(data_share, data_size, factory.getPool());
+
         std::shared_ptr<char[]> data = std::get<0>(tpl);
         data_size = std::get<1>(tpl);
 
         ResponseData response = factory.getResponseData();
         uint16_t  ack_accept = 0;
+
         // 总数据量
         uint32_t total_size = data_size;
         uint16_t piece_count =  data_size/Protocol::defaultPieceLimitSize + (((total_size % Protocol::defaultPieceLimitSize) == 0)?0:1);
@@ -74,6 +77,7 @@ namespace muse::rpc{
 
         struct timeval tm_phase_request = {0,Invoker::timeout};
         setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tm_phase_request, sizeof(struct timeval));
+
         // 阶段 1
         while (ack_accept != piece_count){
             uint16_t end = ack_accept + times;
@@ -86,7 +90,6 @@ namespace muse::rpc{
                     uint16_t pieceDataPartSize = (i == (piece_count - 1))?last_piece_size: Protocol::defaultPieceLimitSize;
                     // 设置序号和大小
                     protocol.setProtocolOrderAndSize(buffer, i, pieceDataPartSize);
-                    protocol.setAcceptMinOrder(buffer, ack_accept);
                     std::memcpy(buffer + Protocol::protocolHeaderSize, data.get() + (i * Protocol::defaultPieceLimitSize), pieceDataPartSize); //body
                     // 发送输出到服务器
                     ::sendto(socket_fd, buffer,  Protocol::protocolHeaderSize + pieceDataPartSize, 0, (struct sockaddr*)&server_address, len);
@@ -132,7 +135,7 @@ namespace muse::rpc{
                             ack_accept = piece_count;
                         }
                     }else{
-                        throw InvokerException("server response data can not parse!", InvokerError::ServerNotSupportTheProtocol);
+                        throw ClientException("server response data can not parse!", ClientError::ServerNotSupportTheProtocol);
                     }
                 }else{
                     SPDLOG_ERROR("request timeout no data receive from server");
@@ -184,9 +187,11 @@ namespace muse::rpc{
                                 //只会初始化一次
                                 response.initialize(header.timePoint, header.totalCount, header.totalSize);
                                 //保存数据
-                                auto des = response.data.get() +  header.pieceOrder * Protocol::defaultPieceLimitSize;
-                                // 完成报文内容拷贝
-                                std::memcpy(des, buffer + muse::rpc::Protocol::protocolHeaderSize ,header.pieceSize);
+                                if (!response.getPieceState(header.pieceOrder)){
+                                    auto des = response.data.get() +  header.pieceOrder * Protocol::defaultPieceLimitSize;
+                                    // 完成报文内容拷贝
+                                    std::memcpy(des, buffer + muse::rpc::Protocol::protocolHeaderSize ,header.pieceSize);
+                                }
                                 auto ACK = response.setPieceState(header.pieceOrder , true);
                                 sendResponseACK(socket_fd, ACK, header.timePoint);
                                 SPDLOG_INFO("send ACK {} to server total {}", ACK, response.piece_count);
@@ -227,8 +232,8 @@ namespace muse::rpc{
             }
         }
 
-        auto realTpl = zlib_service.In(response.data, response.total_size, factory.getPool());
-
+        //属于是真获得了数据
+        auto realTpl = MiddlewareChannel::GetInstance()->ClientIn(response.data, response.total_size, factory.getPool());
         response.data = std::get<0>(realTpl);
         response.total_size = std::get<1>(realTpl);
         response.isSuccess = true;
@@ -251,7 +256,6 @@ namespace muse::rpc{
         protocol.setACKAcceptOrder(buffer, _ack_number);
         ::sendto(_socket_fd, buffer,  Protocol::protocolHeaderSize, 0, (struct sockaddr*)&server_address, sizeof(server_address));
     }
-
 
     //发送心跳信息
     void Invoker::sendHeartbeat(int _socket_fd, uint64_t _message_id) {

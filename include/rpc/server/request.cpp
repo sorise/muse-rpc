@@ -37,10 +37,10 @@ namespace muse::rpc{
     }
 
     Request::Request(uint64_t _id, uint16_t _port, uint32_t _ip, uint16_t _pieces, uint32_t _data_size):
-            Servlet(_id, _port, _ip),
-            piece_count(_pieces),
-            total_data_size(_data_size),
-            piece_state(_pieces, false){
+    Servlet(_id, _port, _ip),
+    piece_count(_pieces),
+    total_data_size(_data_size),
+    piece_state(_pieces, false){
 
     }
 

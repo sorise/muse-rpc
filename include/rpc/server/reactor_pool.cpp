@@ -5,14 +5,20 @@
 
 namespace muse::rpc{
 
+    size_t ThreadPoolSetting::MinThreadCount = REACTOR_MIN_THREAD;
+    size_t ThreadPoolSetting::MaxThreadCount = REACTOR_MAX_THREAD;
+    size_t ThreadPoolSetting::TaskQueueLength = REACTOR_QUEUE_LENGTH;
+    std::chrono::milliseconds ThreadPoolSetting::DynamicThreadVacantMillisecond = std::chrono::milliseconds(REACTOR_THREAD_RATE_millisecond) ;
+
+
     ThreadPool* Threads() {
         return new ThreadPool(
-                REACTOR_MIN_THREAD,
-                REACTOR_MAX_THREAD,
-                REACTOR_QUEUE_LENGTH,
+                ThreadPoolSetting::MinThreadCount,
+                ThreadPoolSetting::MaxThreadCount,
+                ThreadPoolSetting::TaskQueueLength,
                 ThreadPoolType::Flexible,
                 ThreadPoolCloseStrategy::WaitAllTaskFinish,
-                std::chrono::milliseconds(REACTOR_THREAD_RATE_millisecond)
+                std::chrono::milliseconds(ThreadPoolSetting::DynamicThreadVacantMillisecond)
         );
     }
 

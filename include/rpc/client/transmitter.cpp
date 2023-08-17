@@ -7,8 +7,8 @@
 namespace muse::rpc {
 
     TransmitterTask::TransmitterTask(TransmitterEvent && _event, const uint64_t& _message_id)
-    :event(std::move(_event)),
-    phase(CommunicationPhase::Request), message_id(_message_id),data(nullptr),response_data()
+            :event(std::move(_event)),
+             phase(CommunicationPhase::Request), message_id(_message_id),data(nullptr),response_data()
     {
         if(1 != inet_aton(event.get_ip_address().c_str(),&server_address.sin_addr)){
             throw ClientException("ip address not right", ClientError::IPAddressError);
@@ -18,8 +18,8 @@ namespace muse::rpc {
     }
 
     Transmitter::Transmitter(const int& _port, const std::shared_ptr<ThreadPool>& _workers):
-    workers(_workers),
-    port(_port)
+            workers(_workers),
+            port(_port)
     {
         this->socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
         if(this->socket_fd == -1){
@@ -125,7 +125,7 @@ namespace muse::rpc {
                                     }
                                 }
                             }
-                            // 对面没有收到前面的消息，但是你发了 RequestACK
+                                // 对面没有收到前面的消息，但是你发了 RequestACK
                             else if (header.type == ProtocolType::StateReset){
                                 //需要重新发送数据
                                 msg->second->timeout_time = 0;
@@ -133,18 +133,18 @@ namespace muse::rpc {
                                 send_data(msg->second);
                                 timer.setTimeout(this->request_timeout.count(), &Transmitter::timeout_event, this,  msg->second->message_id,  msg->second->ack_accept);
                             }
-                            // 服务器资源已经耗尽，无法再处理下去
+                                // 服务器资源已经耗尽，无法再处理下去
                             else if (header.type == ProtocolType::TheServerResourcesExhausted){
                                 msg->second->response_data.isSuccess = false;
                                 msg->second->response_data.reason = FailureReason::TheServerResourcesExhausted;
                                 try_trigger(msg->second);
                             }
-                            // 服务器返回心跳信息
+                                // 服务器返回心跳信息
                             else if (header.type == ProtocolType::TimedOutResponseHeartbeat){
                                 //msg->second->timeout_time = 0; //已经统一执行了
                                 //SPDLOG_INFO("Transmitter get ResponseHeartbeat from server!" , header.acceptOrder ,msg->second->message_id);
                             }
-                            // 服务器请求心跳信息
+                                // 服务器请求心跳信息
                             else if (header.type == ProtocolType::TimedOutRequestHeartbeat){
                                 send_heart_beat(msg->second, header.phase);
                             }
@@ -154,7 +154,7 @@ namespace muse::rpc {
                                 msg->second->phase = CommunicationPhase::Response;
                                 msg->second->ack_accept = msg->second->piece_count;
                             }
-                            // 收到响应数据
+                                // 收到响应数据
                             else if (header.type == ProtocolType::RequestSend){
                                 //SPDLOG_INFO("Transmitter get data order {} of {} from server!" , header.pieceOrder ,msg->second->message_id);
                                 //收到输出，对响应对象初始化
@@ -177,19 +177,19 @@ namespace muse::rpc {
                                     response_timeout_event(msg->first,  msg->second->last_active);
                                 }
                             }
-                            // 服务端请求 ACK  [ 暂未纳入协议流程 ]
+                                // 服务端请求 ACK  [ 暂未纳入协议流程 ]
                             else if(header.type == ProtocolType::RequestACK){
                                 auto ACK = msg->second->response_data.setPieceState(header.pieceOrder , true);
                                 //发送ACK
                                 send_response_ACK(msg->second, ACK);
                             }
-                            //收到心跳数据，服务器正在处理数据
+                                //收到心跳数据，服务器正在处理数据
                             else if(header.type == ProtocolType::TimedOutResponseHeartbeat){
                                 //再等待一个超时时间
                                 response_timeout_event(msg->first,  msg->second->last_active);
                                 //SPDLOG_INFO("Transmitter get ResponseHeartbeat from server!" , header.acceptOrder ,msg->second->message_id);
                             }
-                            // 服务器请求心跳信息 [ 暂未纳入协议流程 ]
+                                // 服务器请求心跳信息 [ 暂未纳入协议流程 ]
                             else if (header.type == ProtocolType::TimedOutRequestHeartbeat){
                                 send_heart_beat(msg->second, CommunicationPhase::Response);
                             }
@@ -275,9 +275,9 @@ namespace muse::rpc {
     void Transmitter::request_ACK(const std::shared_ptr<TransmitterTask>& task){
         //超时没有收到消息
         protocol.initiateSenderProtocolHeader(buffer,
-                task->message_id,
-                task->total_size,
-                Protocol::protocolHeaderSize
+                                              task->message_id,
+                                              task->total_size,
+                                              Protocol::protocolHeaderSize
         );
         protocol.setProtocolType(buffer,ProtocolType::RequestACK);
         ::sendto(socket_fd,

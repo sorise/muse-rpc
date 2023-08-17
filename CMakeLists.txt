@@ -83,10 +83,10 @@ target_link_libraries(call
 target_link_libraries(muse
         PUBLIC rpc
 )
-
-target_link_libraries(call PUBLIC serializer)
-
 target_link_libraries(client
+        PUBLIC rpc
+)
+target_link_libraries(call
         PUBLIC rpc
 )
 

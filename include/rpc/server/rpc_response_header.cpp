@@ -21,4 +21,9 @@ namespace muse::rpc{
     :ok(false),reason((int)RpcFailureReason::Success) {
 
     }
+
+    RpcResponseHeader::RpcResponseHeader(const RpcResponseHeader &other)
+    :ok(other.ok),reason(other.reason){
+
+    }
 }

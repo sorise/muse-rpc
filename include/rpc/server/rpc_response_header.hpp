@@ -22,6 +22,7 @@ namespace muse::rpc{
         MUSE_IBinarySerializable(ok, reason);
 
         RpcResponseHeader();
+        RpcResponseHeader(const RpcResponseHeader &other);
 
         void setOkState(const bool& _ok);
 

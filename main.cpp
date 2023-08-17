@@ -77,18 +77,14 @@ int read_str(std::string message, const std::vector<double>& scores){
     return (int)message.size();
 }
 
-int main() {
-//    Peer peer {14500,2130706433};
-//    GlobalEntry::con_queue->insert_or_assign(peer, SocketConnection { 1,1 });
-//
-//    Peer peer1 {14500,2130706433};
-//    auto it = GlobalEntry::con_queue->find(peer1);
-//    if (it == GlobalEntry::con_queue->end()){
-//        printf("what?");
-//    }else{
-//        printf("what????");
-//    }
 
+
+int main() {
+    /* 设置线程池 */
+    ThreadPoolSetting::MinThreadCount = 4;
+    ThreadPoolSetting::MaxThreadCount = 4;
+    ThreadPoolSetting::TaskQueueLength = 4096;
+    ThreadPoolSetting::DynamicThreadVacantMillisecond = 3000ms;
 
     //绑定方法的例子
     Normal normal(10, "remix");
@@ -112,7 +108,7 @@ int main() {
     // 启动日志
     InitSystemLogger();
     // 开一个线程启动反应堆,等待请求
-    Reactor reactor(15000, 1,1500, ReactorRuntimeThread::Asynchronous);
+    Reactor reactor(15000, 2,1500, ReactorRuntimeThread::Asynchronous);
 
     try {
         //开始运行
@@ -122,6 +118,6 @@ int main() {
     }
 
     std::cin.get();
-    GetThreadPoolSingleton()->close(); //关闭默认线程池
+    reactor.stop();
     spdlog::default_logger()->flush(); //刷新日志
 }

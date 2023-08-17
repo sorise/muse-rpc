@@ -48,7 +48,7 @@ namespace muse::rpc {
         Asynchronous = 2  // 发送器新开一个线程运行
     };
 
-// 0.6s
+// 1.0s
 #define Transmitter_Request_TimeOut 1000
 // 0.9s
 #define Transmitter_Response_TimeOut 900

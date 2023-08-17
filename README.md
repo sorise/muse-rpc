@@ -6,7 +6,9 @@
 - 支持中间件配置、支持数据压缩、自定义中间件
 - 目前采用的IO复用方式是同步IO epoll 模型，仅支持 linux(后续会增加 select 以支持windows平台)。
 - 简单请求响应协议（Simple Request-Response Protocol）在UDP的基础上提供了ACK确认、请求重传、重组排序、心跳功能！
-- 客户端支持阻塞RPC请求和基于回调的非阻塞RPC请求
+- 客户端支持阻塞RPC请求和基于回调的非阻塞RPC请求防止。
+- 在单个从反应堆、四个工作线程下 `千级访问`并发无问题！
+- 文档尚不全,有任何疑问可以 `留言` 咨询。
 
 
 **目前使用方法**：
@@ -236,6 +238,9 @@ enum class RpcFailureReason:int{
 非阻塞请求的意思是你只需设定好请求任务，注册一个回调函数用于处理请求结果即可，发送过程由Transmitter对象来处理，这样就不会因为网络原因和处理过程阻塞当前线程，
 非阻塞将会基于回调来处理，可以用于处理大量请求的情况，这里我们需要一个 Transmitter 对象、发送任务通过TransmitterEvent来设置！
 
+**注意**： 单个Transmitter同时发送的任务数量应该在100以下，如果发送的请求任务超过100，需要增加超时时间，可以调用如下接口设置操作时间
+* void MiddlewareChannel::set_request_timeout(const uint32_t& _timeout); 设置请求阶段的等待超时时间，timeout是毫秒数，默认值是1000毫秒。
+* void MiddlewareChannel::set_response_timeout(const uint32_t& _timeout); 设置响应阶段的等待超时时间，默认值是900毫秒。
 ```cpp
 void test_v(){
     //注册中间件
@@ -246,14 +251,19 @@ void test_v(){
 
     Transmitter transmitter(14500, GetThreadPoolSingleton());
     
+    //transmitter.set_request_timeout(1500); //设置请求阶段的等待超时时间
+    //transmitter.set_response_timeout(2000); //设置响应阶段的等待超时时间
+    
     //测试参数
     std::vector<double> score = {
-            100.526,95.84,75.86,99.515,6315.484,944.5,98.2,99898.26,9645.54,484.1456,8974.4654,4894.156,
-            89,12,0.56,95.56,41
+            100.526,95.84,75.86,99.515,6315.484,944.5,98.2,99898.26,
+            9645.54,484.1456,8974.4654,4894.156,89,12,0.56,95.56,41
     };
 
     std::string name {
-        "asdasd54986198456h487s1as8d7as5d1w877y98j34512g98adsf3488as31c98a"
+        "asdasd54986198456h487s1as8d7as5d1w877y98j34512g98ad"
+        "sf3488as31c98aasdasd54986198sdasdasd456h487s1as8d7a"
+        "s5d1w877y98j34512g98ad"
     };
     
     for (int i = 0; i < 1000; ++i) {
@@ -276,6 +286,20 @@ void test_v(){
     //如果想直接停止可以使用 transmitter.stop_immediately()方法
 }
 ```
+#### [1.5 线程池配置方法](#)
+支持配置核心线程数、最大线程数、和任务缓存队列长度、动态线程空闲时间！
+* 核心线程数：线程池最少有多少线程，默认值为 **4**。
+* 最大线程数：线程池最多有多少线程，多出来的线程属于动态线程，当任务多时创建，在任务少的时候会被销毁，默认值为 **4**。
+* 任务缓存队列长度：暂未执行的任务将会放到缓存队列中，等待执行。
+* 动态线程空闲时间：指在动态线程没有任务支持时最多存活多久，默认值为 **4096**
+
+```cpp
+ThreadPoolSetting::MinThreadCount = 4;  //设置 核心线程数
+ThreadPoolSetting::MaxThreadCount = 4;  //设置 核心线程数
+ThreadPoolSetting::TaskQueueLength = 4096;    //设置 任务缓存队列长度
+ThreadPoolSetting::DynamicThreadVacantMillisecond = 3000ms; //动态线程空闲时间
+```
+
 
 ### [2. 网络协议：Simple Request-Response Protocol](#)
 **介绍**：简单请求响应协议（SR2P 协议），是一种两阶段协议，专门为 RPC 定制，分为请求和响应两个阶段不需要建立链接。

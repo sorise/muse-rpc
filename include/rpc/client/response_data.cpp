@@ -91,8 +91,10 @@ namespace muse::rpc{
     total_size(other.total_size),
     data(other.data),
     isSuccess(other.isSuccess),
+    reason(other.reason),
+      is_initial(other.is_initial),
     piece_count(other.piece_count){
-        is_initial = other.is_initial;
+
     }
 
     ResponseData::ResponseData(ResponseData &&other) noexcept
@@ -101,7 +103,9 @@ namespace muse::rpc{
     message_id(other.message_id),
     total_size(other.total_size),
      data(std::move(other.data)),
+     reason(other.reason),
      isSuccess(other.isSuccess),
+     is_initial(other.is_initial),
     piece_count(other.piece_count){
         is_initial = other.is_initial;
     }

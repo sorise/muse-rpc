@@ -120,7 +120,7 @@ namespace muse::rpc{
                     auto it= GlobalEntry::con_queue->find(peer);
                     if (it != GlobalEntry::con_queue->end()){
                         //已经创建连接了
-                        //subs[it->second.SubReactor_index]->acceptConnection(-1, recvLen, addr, dt);
+                        subs[it->second.SubReactor_index]->acceptConnection(it->second.socket, recvLen, addr, dt, false);
                         SPDLOG_INFO("directly send data to sub reactor because vir connection is build!");
                         continue;
                     }
@@ -145,7 +145,7 @@ namespace muse::rpc{
                             uint32_t idx = counter % subReactorCount;
                             counter++;
                             SPDLOG_INFO("Main-Reactor send connection to {} sub reactor",idx);
-                            auto result = subs[idx]->acceptConnection(sonSocketFd, recvLen, addr, dt);
+                            auto result = subs[idx]->acceptConnection(sonSocketFd, recvLen, addr, dt, true);
                             if (!result){
                                 SPDLOG_WARN("Sub Reactor has been stopped!");
                                 close(sonSocketFd);

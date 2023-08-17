@@ -4,6 +4,8 @@
 
 #ifndef MUSE_RPC_ZLIB_SERVICE_HPP
 #define MUSE_RPC_ZLIB_SERVICE_HPP
+#include "../logger/conf.hpp"
+#include <algorithm>
 #include "middleware_service.hpp"
 #include "../protocol/protocol.hpp"
 #include <zlib.h>

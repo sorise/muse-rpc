@@ -44,7 +44,7 @@ namespace muse::rpc {
         //等待线程死掉
         if (runner != nullptr){
             if (runner->joinable()) runner->join();
-            SPDLOG_INFO("Runner die!");
+            //SPDLOG_INFO("Runner die!");
         }
 
     }
@@ -63,7 +63,7 @@ namespace muse::rpc {
                     for (auto &it: new_messages) {
                         if (messages.count(it.first) == 0){
                             messages[it.first] = it.second;
-                            SPDLOG_INFO("Transmitter add message {} ", it.second->message_id);
+                            //SPDLOG_INFO("Transmitter add message {} ", it.second->message_id);
                         }
                     }
                 }
@@ -111,13 +111,13 @@ namespace muse::rpc {
                         {
                             //收到确认ACK
                             if (header.type == ProtocolType::ReceiverACK){
-                                SPDLOG_INFO("Transmitter get ACK {} of {}!" , header.acceptOrder ,msg->second->message_id);
+                                //SPDLOG_INFO("Transmitter get ACK {} of {}!" , header.acceptOrder ,msg->second->message_id);
                                 if (header.acceptOrder > msg->second->ack_accept){
                                     msg->second->ack_accept = header.acceptOrder;
                                     //对方已经收到所有的数据
                                     if (header.acceptOrder == msg->second->piece_count){
                                         //最后一个了
-                                        SPDLOG_INFO("Sub Reactor send all data of the message_id {}", header.timePoint);
+                                        //SPDLOG_INFO("Sub Reactor send all data of the message_id {}", header.timePoint);
                                         //转变阶段
                                         msg->second->phase = CommunicationPhase::Response;
                                         //二阶段超时心跳
@@ -142,7 +142,7 @@ namespace muse::rpc {
                             // 服务器返回心跳信息
                             else if (header.type == ProtocolType::TimedOutResponseHeartbeat){
                                 //msg->second->timeout_time = 0; //已经统一执行了
-                                SPDLOG_INFO("Transmitter get ResponseHeartbeat from server!" , header.acceptOrder ,msg->second->message_id);
+                                //SPDLOG_INFO("Transmitter get ResponseHeartbeat from server!" , header.acceptOrder ,msg->second->message_id);
                             }
                             // 服务器请求心跳信息
                             else if (header.type == ProtocolType::TimedOutRequestHeartbeat){
@@ -156,7 +156,7 @@ namespace muse::rpc {
                             }
                             // 收到响应数据
                             else if (header.type == ProtocolType::RequestSend){
-                                SPDLOG_INFO("Transmitter get data order {} of {} from server!" , header.pieceOrder ,msg->second->message_id);
+                                //SPDLOG_INFO("Transmitter get data order {} of {} from server!" , header.pieceOrder ,msg->second->message_id);
                                 //收到输出，对响应对象初始化
                                 msg->second->response_data.initialize(header.timePoint, header.totalCount, header.totalSize);
                                 if (!msg->second->response_data.getPieceState(header.pieceOrder)){
@@ -170,7 +170,7 @@ namespace muse::rpc {
                                 //收到所有的数据
                                 if (ACK == msg->second->response_data.piece_count){
                                     msg->second->response_data.isSuccess = true;
-                                    SPDLOG_INFO(" try trigger get all data!");
+                                    //SPDLOG_INFO(" try trigger get all data!");
                                     try_trigger(msg->second);
                                 }else{
                                     //开启一个定时器等待后面的数据
@@ -187,7 +187,7 @@ namespace muse::rpc {
                             else if(header.type == ProtocolType::TimedOutResponseHeartbeat){
                                 //再等待一个超时时间
                                 response_timeout_event(msg->first,  msg->second->last_active);
-                                SPDLOG_INFO("Transmitter get ResponseHeartbeat from server!" , header.acceptOrder ,msg->second->message_id);
+                                //SPDLOG_INFO("Transmitter get ResponseHeartbeat from server!" , header.acceptOrder ,msg->second->message_id);
                             }
                             // 服务器请求心跳信息 [ 暂未纳入协议流程 ]
                             else if (header.type == ProtocolType::TimedOutRequestHeartbeat){
@@ -255,7 +255,7 @@ namespace muse::rpc {
             std::memcpy(buffer + Protocol::protocolHeaderSize, task->data.get() + (i * Protocol::defaultPieceLimitSize), pieceDataPartSize); //body
             // 发送输出到服务器
             ::sendto(socket_fd, buffer,  Protocol::protocolHeaderSize + pieceDataPartSize, 0, (struct sockaddr*)&(task->server_address), sizeof(task->server_address));
-            SPDLOG_INFO("Transmitter send request data {} order {}", pieceDataPartSize, i);
+            //SPDLOG_INFO("Transmitter send request data {} order {}", pieceDataPartSize, i);
         }
         task->ack_expect = i; //预期 ack_expect
     }
@@ -315,7 +315,7 @@ namespace muse::rpc {
                 auto result = workers->commit_executor(ex);
                 if (!result.isSuccess){
                     //如果提交失败咋办？
-                    SPDLOG_ERROR("Transmitter::trigger commit to thread pool error!", msg->message_id);
+                    //SPDLOG_ERROR("Transmitter::trigger commit to thread pool error!", msg->message_id);
                     //开线程
                     auto fu = std::async(std::launch::async,&Transmitter::trigger, this, msg->message_id);
                 }
@@ -340,7 +340,6 @@ namespace muse::rpc {
                     }
                 }else{
                     send_request_heart_beat(it->second, CommunicationPhase::Response);
-                    SPDLOG_WARN("Transmitter wait response timout {}", it->second->message_id);
                     //再设置一个定时器
                     timer.setTimeout(this->request_timeout.count(), &Transmitter::response_timeout_event, this,  message_id, last_active);
                 }
@@ -365,7 +364,7 @@ namespace muse::rpc {
                 }else{
                     //发送请求报文
                     request_ACK(it->second);
-                    SPDLOG_ERROR("Transmitter::trigger timout {}", it->second->message_id);
+                    //SPDLOG_ERROR("Transmitter::trigger timout {}", it->second->message_id);
                     //再设置一个定时器
                     timer.setTimeout(this->request_timeout.count(), &Transmitter::timeout_event, this,  message_id, cur_ack);
                 }
@@ -374,9 +373,8 @@ namespace muse::rpc {
     }
 
     void Transmitter::delete_message(uint64_t message_id) {
-        auto it = messages.find(message_id);
-        if (it != messages.end()){
-            SPDLOG_INFO("Transmitter delete message {} !", message_id);
+        if (messages.count(message_id)){
+            //SPDLOG_INFO("Transmitter delete message {} !", message_id);
             messages.erase(message_id);
         }
     }
@@ -436,11 +434,11 @@ namespace muse::rpc {
     }
 
     void Transmitter::start(TransmitterThreadType type) {
+        run_state.store(true, std::memory_order_relaxed);
         if (type == TransmitterThreadType::Synchronous){
             loop();
         }else{
             try {
-                run_state.store(true, std::memory_order_relaxed);
                 runner = std::make_shared<std::thread>(&Transmitter::loop, this);
             }catch(const std::exception &exp){
                 throw exp;
@@ -449,6 +447,13 @@ namespace muse::rpc {
     }
 
     void Transmitter::stop() noexcept {
+        while (!new_messages.empty()  || !messages.empty()){
+            std::this_thread::sleep_for(10ms);
+        }
+        run_state.store(false, std::memory_order_relaxed);
+    }
+
+    void Transmitter::stop_immediately() noexcept {
         run_state.store(false, std::memory_order_relaxed);
     }
 } // muse::rpc

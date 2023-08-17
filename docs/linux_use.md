@@ -44,3 +44,10 @@ scp ./muse-rpc.zip root@125.91.127.142:/home
 ```
 
 ### [3. tcpdump 命令](#)
+
+
+### [4. valgrind](#)
+
+```shell
+valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --undef-value-errors=no --log-file=log
+```

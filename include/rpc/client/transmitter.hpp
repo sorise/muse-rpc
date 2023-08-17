@@ -78,6 +78,8 @@ namespace muse::rpc {
 
         void stop() noexcept;
 
+        void stop_immediately() noexcept;
+
         virtual ~Transmitter();
     private:
         void loop();

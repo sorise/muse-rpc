@@ -39,11 +39,11 @@ namespace muse::rpc{
             if (responseData.isOk()){
                 //写入数据
                 try {
-                    serializer.clear();
-                    serializer.write(responseData.data.get(), responseData.getSize());
-                    serializer.output(result.response);
+                    BinarySerializer _serializer;
+                    _serializer.write(responseData.data.get(), responseData.getSize());
+                    _serializer.output(result.response);
                     if (result.response.getOkState()){
-                        serializer.output(result.value);
+                        _serializer.output(result.value);
                     }
                 } catch (...) {
                     //读取错误，返回值非预期
@@ -90,11 +90,11 @@ namespace muse::rpc{
             if (responseData.isOk()){
                 //写入数据
                 try {
-                    serializer.clear();
-                    serializer.write(responseData.data.get(), responseData.getSize());
-                    serializer.output(result.response);
+                    BinarySerializer _serializer;
+                    _serializer.write(responseData.data.get(), responseData.getSize());
+                    _serializer.output(result.response);
                     if (result.response.getOkState()){
-                        serializer.output(result.value);
+                        _serializer.output(result.value);
                     }
                 } catch (...) {
                     //读取错误，返回值非预期
@@ -118,9 +118,9 @@ namespace muse::rpc{
             if (responseData.isOk()){
                 //写入数据
                 try {
-                    serializer.clear();
-                    serializer.write(responseData.data.get(), responseData.getSize());
-                    serializer.output(result.response);
+                    BinarySerializer _serializer;
+                    _serializer.write(responseData.data.get(), responseData.getSize());
+                    _serializer.output(result.response);
                 } catch (...) {
                     //读取错误，返回值非预期
                     result.response.setOkState(false);
@@ -132,7 +132,6 @@ namespace muse::rpc{
             }
             //触发回调函数
             ((*c).*func)(result);
-
         }
 
         template<typename R>
@@ -179,7 +178,7 @@ namespace muse::rpc{
         TransmitterEvent(std::string _ip_address, const uint16_t& _port);
         TransmitterEvent(const TransmitterEvent& other) = delete;
         TransmitterEvent(TransmitterEvent&& event) noexcept;
-
+        virtual ~TransmitterEvent();
         [[nodiscard]] bool get_callBack_state() const;
         [[nodiscard]] bool get_remote_state() const;
         [[nodiscard]] const uint64_t & get_message_id() const;
@@ -192,6 +191,7 @@ namespace muse::rpc{
         /* 决定调用哪个访问 */
         template<typename R, typename ...Argc>
         bool call(const std::string& Name, Argc&&...argc){
+            serializer.clear();
             if (!is_set_remote_func ) is_set_remote_func = true;
             std::tuple<Argc...> tpl(argc...);
             serializer.input(Name); //写入远程名称

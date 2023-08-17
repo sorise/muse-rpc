@@ -2,7 +2,7 @@
 // Created by remix on 23-7-30.
 //
 
-#include <algorithm>
+
 #include "zlib_service.hpp"
 
 namespace muse::rpc{
@@ -48,6 +48,9 @@ namespace muse::rpc{
         }
         uLongf inDesSize = desSize;
         auto ret = compress(reinterpret_cast<Bytef *>(destOutBuffer.get() + len_flag_size), &inDesSize, reinterpret_cast<const Bytef *>(data.get()), data_size);
+        if (inDesSize > desSize){
+            throw std::runtime_error("ya suo cuo wu memory call error!");
+        }
         if (ret != Z_OK) {
             throw std::runtime_error("ya suo cuo wu");
         }

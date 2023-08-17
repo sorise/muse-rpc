@@ -30,7 +30,7 @@ namespace muse::rpc{
     class SubReactor{
     public:
         using message_queue = std::map<Servlet, Request, std::less<>>;
-        using connection_tuple_type = std::tuple<int, size_t, sockaddr_in, std::shared_ptr<char[]>>;
+        using connection_tuple_type = std::tuple<int, size_t, sockaddr_in, std::shared_ptr<char[]>, bool>;
     public:
         //客户端 connect 超时时间单位 2 分钟
         static constexpr const std::chrono::milliseconds ConnectionTimeOut = 120000ms; //120000
@@ -121,6 +121,7 @@ namespace muse::rpc{
         /* 关闭一个 connect udp socket,并且将其从 epoll 中 移除 */
         void closeSocket(VirtualConnection *vc) const;
 
+        /* 需要改造，不应该拥有迭代器，而应该只拥有发送的数据 */
         void sendResponseDataToClient(VirtualConnection *vir, uint64_t _message_id);
 
         void checkDeleteSocket(VirtualConnection *vir);
@@ -129,7 +130,7 @@ namespace muse::rpc{
          * 主反应堆 将新链接传输到 从反应堆的接口
          * 有一次内存复制, 丢到 connections 和 Epoll loop 中
          */
-        bool acceptConnection(int _socketFd, size_t _recv_length, sockaddr_in addr ,const std::shared_ptr<char[]>& data);
+        bool acceptConnection(int _socketFd, size_t _recv_length, sockaddr_in addr ,const std::shared_ptr<char[]>& data, bool new_connection);
         /*
          * 构造函数
          * 需要注入一个内存储

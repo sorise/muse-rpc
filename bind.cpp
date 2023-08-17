@@ -9,18 +9,37 @@
 #include <memory>
 #include <set>
 #include <thread>
-#include <zlib.h>
 #include <functional>
 #include <cstring>
 #include <future>
+#include <memory_resource>
+
+std::pmr::synchronized_pool_resource* make_memory_pool(){
+    std::pmr::pool_options option;
+    option.largest_required_pool_block = 1024*1024*5; //5M
+    option.max_blocks_per_chunk = 2048; //每一个chunk有多少个block
+    auto *pool = new std::pmr::synchronized_pool_resource(option);
+    return pool;
+}
+
+std::shared_ptr<char[]> btest(std::shared_ptr<char[]> pt){
+    std::shared_ptr<char[]> dt = pt;
+    return dt;
+}
 
 int main()
 {
-    auto future = std::async(std::launch::async,[](){
-        std::cout << "what" << std::endl;
-    });
+    std::shared_ptr<std::pmr::synchronized_pool_resource> pool(make_memory_pool()) ;
 
+    for (int i = 0; i < 1000; ++i) {
+        char* d= (char*)pool->allocate(14);
+        std::shared_ptr<char[]> dt(d, [=](char *ptr){
+            printf("delete\n");
+            pool->deallocate(d,1564);
+        } );
+        auto at = btest(dt);
+        printf("---- %d\n", i);
+    }
 
-    std::cin.get();
     return 0;
 }

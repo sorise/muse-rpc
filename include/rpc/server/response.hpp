@@ -3,6 +3,7 @@
 #ifndef MUSE_RPC_RESPONSE_HPP
 #define MUSE_RPC_RESPONSE_HPP
 #include "reqeust.hpp"
+#include "../memory/conf.hpp"
 #include "../protocol/protocol.hpp"
 
 //在客户端 由客户端负载创建
@@ -19,9 +20,13 @@ namespace muse::rpc{
         uint16_t                        ack_accept;                   // 已经收到的最大 ack
         bool                            is_get_new_ack {true};        //是否得到新的客户端响应
     public:
+        std::shared_ptr<std::pmr::synchronized_pool_resource> pool {nullptr};
         std::chrono::milliseconds       lastActive;         //标记什么时候收到了客户端发来的消息，初始化使用响应数据已经准备好的时间
-        std::shared_ptr<char[]>         data;               //数据
-        Response(uint64_t _id, uint16_t _port, uint32_t _ip, uint16_t _pieces, uint32_t _data_size, std::shared_ptr<char[]>  _data);
+        char*  data;               //数据
+        Response();
+        Response(uint64_t _id, uint16_t _port, uint32_t _ip, uint16_t _pieces, uint32_t _data_size, char* _data);
+        Response(const Response &other);
+        ~Response() override;
         uint32_t getTotalDataSize() const;
         uint16_t getPieceCount() const;
         bool getPieceState(const uint32_t & _idx) const;

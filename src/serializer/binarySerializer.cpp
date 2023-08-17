@@ -50,10 +50,9 @@ namespace muse::serializer{
     BinarySerializer::~BinarySerializer()  = default;
 
     BinarySerializer::BinarySerializer(BinarySerializer &&other) noexcept
-    : byteStream(std::move(other.byteStream)){
-        readPosition = other.readPosition;
-        byteSequence = other.byteSequence;
-
+    :byteStream(std::move(other.byteStream)),
+    readPosition(other.readPosition),
+    byteSequence(other.byteSequence){
         other.readPosition = 0;
     }
 

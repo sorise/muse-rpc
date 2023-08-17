@@ -5,18 +5,42 @@
 
 namespace muse::rpc{
 
-    Response::Response(uint64_t _id, uint16_t _port, uint32_t _ip, uint16_t _pieces, uint32_t _data_size, std::shared_ptr<char[]>  _data):
-    Servlet(_id, _port, _ip),
-    data(_data),
+
+    Response::Response():
+    Servlet(0, 0, 0),
+    data(nullptr),
     ack_accept(0),
-    piece_count(_pieces),
-    total_data_size(_data_size),
-    piece_state(0)
+    piece_count(0),
+    total_data_size(0),
+    piece_state(0),
+    last_piece_size(0)
+    {
+        lastActive = GetNowTick();
+    }
+
+    Response::Response(uint64_t _id, uint16_t _port, uint32_t _ip, uint16_t _pieces, uint32_t _data_size, char*  _data):
+            Servlet(_id, _port, _ip),
+            data(_data),
+            ack_accept(0),
+            piece_count(_pieces),
+            total_data_size(_data_size),
+            piece_state(0)
     {
         last_piece_size = (_data_size % Protocol::defaultPieceLimitSize == 0)? Protocol::defaultPieceLimitSize:_data_size % Protocol::defaultPieceLimitSize;
         lastActive = GetNowTick();
     }
 
+    Response::Response(const Response &other):
+    Servlet(other),
+    data(other.data),
+    ack_accept(other.ack_accept),
+    piece_count(other.piece_count),
+    total_data_size(other.total_data_size),
+    last_piece_size(other.last_piece_size),
+    pool(other.pool),
+    piece_state(other.piece_state){
+
+    }
 
     uint32_t Response::getTotalDataSize() const {
         return total_data_size;
@@ -67,5 +91,15 @@ namespace muse::rpc{
     bool Response::getNewAckState() const {
         return this->is_get_new_ack;
     }
+
+    Response::~Response() {
+        if (pool == nullptr){
+            MemoryPoolSingleton()->deallocate(data, total_data_size);
+        }else {
+            pool->deallocate(data, total_data_size);
+        };
+
+    }
+
 
 }

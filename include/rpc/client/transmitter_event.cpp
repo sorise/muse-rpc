@@ -58,4 +58,8 @@ namespace muse::rpc{
     const uint64_t & TransmitterEvent::get_message_id() const {
         return message_id;
     }
+
+    TransmitterEvent::~TransmitterEvent() {
+
+    }
 }

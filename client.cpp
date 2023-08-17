@@ -23,10 +23,6 @@ using namespace muse::rpc;
 using namespace muse::timer;
 using namespace std::chrono_literals;
 
-
-
-
-
 class Normal{
 public:
     Normal(int _value, std::string  _name)
@@ -160,16 +156,22 @@ void test_v(){
         "asdasd54986198456h487s1as8d7as5d1w877y98j34512g98adsf3488as31c98a sd3871198The built-in string class provides the ability to do complex variable substitutions and value formatting via the format() method described in PEP 3101. The Formatter class in the string module allows you to create and customize your own string formatting behaviors using the same implementation as the built-in format() method. This function does the actual work of formatting. It is exposed as a separate function for cases where you want to pass in a predefined dictionary of arguments, rather than unpacking and repacking the dictionary as individual arguments using the *args and **kwargs syntax. vformat() does the work of breaking up the format string into character data and replacement fields. It calls the various methods described below."
     };
 
-    transmitter.start(TransmitterThreadType::Asynchronous);
-
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 1000; ++i) {
         TransmitterEvent event("127.0.0.1", 15000);
         event.call<int>("read_str", name,score);
-        event.set_callBack(testfunc);
+        event.set_callBack([](Outcome<int> t){
+            if (t.isOK()){
+                printf("OK lambda %d \n", t.value);
+            }else{
+                printf("fail lambda\n");
+            }
+        });
         transmitter.send(std::move(event));
     }
 
-    std::cin.get();
+    transmitter.start(TransmitterThreadType::Asynchronous);
+
+    transmitter.stop();
 }
 
 int main(int argc, char *argv[]){

@@ -42,18 +42,19 @@ namespace muse::rpc {
         TransmitterTask(TransmitterEvent && _event, const uint64_t& message_id);
     };
 
-
     enum class TransmitterThreadType: int {
         Synchronous = 1,  // 同步方式，发送器当前线程运行
         Asynchronous = 2  // 发送器新开一个线程运行
     };
 
-// 1.0s
-#define Transmitter_Request_TimeOut 1000
-// 0.9s
-#define Transmitter_Response_TimeOut 900
+    // 1.0s
+    #define Transmitter_Request_TimeOut 1000
+    // 0.9s
+    #define Transmitter_Response_TimeOut 900
 
-#define Transmitter_Try_Times  3
+    #define Transmitter_Try_Times  3
+
+    #define Transmitter_Read_GAP  500
 
     class Transmitter {
     public:
@@ -105,6 +106,7 @@ namespace muse::rpc {
 
         void try_trigger(const std::shared_ptr<TransmitterTask>& msg);
     private:
+        std::chrono::milliseconds recv_gap {Transmitter_Read_GAP};
         /* 控制超时时间 毫秒值 */
         std::chrono::milliseconds request_timeout {Transmitter_Request_TimeOut};
         std::chrono::milliseconds response_timeout {Transmitter_Response_TimeOut};

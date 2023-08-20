@@ -13,7 +13,6 @@ namespace muse::rpc{
     serializer(),
     is_set_callback(false),
     is_set_remote_func(false),
-    message_id(GlobalMicrosecondsId()),
     remote_process_name(){
 
     }
@@ -25,7 +24,6 @@ namespace muse::rpc{
     remote_process_name(std::move(event.remote_process_name)),
     is_set_callback(event.is_set_callback),
     is_set_remote_func(event.is_set_remote_func),
-    message_id(event.message_id),
     callBack(std::move(event.callBack))
     {
 
@@ -53,10 +51,6 @@ namespace muse::rpc{
 
     bool TransmitterEvent::get_remote_state() const {
         return this->is_set_remote_func;
-    }
-
-    const uint64_t & TransmitterEvent::get_message_id() const {
-        return message_id;
     }
 
     TransmitterEvent::~TransmitterEvent() {

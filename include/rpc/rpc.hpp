@@ -20,6 +20,7 @@
 #include "server/middleware_channel.hpp"
 #include "server/middleware_service.hpp"
 #include "server/virtual_connection.hpp"
+#include "server/reactor_transmitter.hpp"
 
 
 //异步方法，也就是当前方法可以同时被多个线程同时执行

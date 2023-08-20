@@ -35,9 +35,9 @@ namespace muse::rpc{
         //客户端 connect 超时时间单位 2 分钟
         static constexpr const std::chrono::milliseconds ConnectionTimeOut = 120000ms; //120000
         //request 超时时间
-        static constexpr const std::chrono::milliseconds RequestTimeOut = 5000ms;
+        static constexpr const std::chrono::milliseconds RequestTimeOut = 10000ms;
         //response 超时时间
-        static constexpr const std::chrono::milliseconds ResponseTimeOut = 12000ms;
+        static constexpr const std::chrono::milliseconds ResponseTimeOut = 15000ms;
     private:
         uint16_t port;                                                        // 当前端口
         Protocol protocol_util{};                                             // 协议对象
@@ -56,6 +56,9 @@ namespace muse::rpc{
         muse::timer::TimerTree treeTimer;                                     // 定时器
         //发送缓存区
         char sendBuf[Protocol::FullPieceSize + 1] = { '\0' };
+
+        int epoll_switch_fd = -1;
+    private:
         /*
          * 处理新的链接
          * 如果当前系统维护的链接数量小于(epoll中的socket数量小于) openMaxConnection，则加入到 epoll中
@@ -67,6 +70,8 @@ namespace muse::rpc{
          * 发送一阶段的ACK ProtocolType::ReceiverACK
          */
         void sendACK(int _socket_fd, uint16_t _ack_number, uint64_t _message_id);
+
+        void sendACK(int _socket_fd, struct sockaddr_in addr,uint16_t _ack_number,  uint64_t _message_id);
         /*
          * 发送链接已重置报文
          */
@@ -102,9 +107,9 @@ namespace muse::rpc{
         void judgeResponseClearTimeout(VirtualConnection *vir, uint64_t _message_id);
 
         void setRequestTimeOutEvent(const Servlet& servlet);
-        /* 判断是否可以删除 request */
+        /** 判断是否可以删除 request */
         void judgeDelete(const Servlet& _servlet);
-        /*
+        /**
          * 已经收到所有的报文内容。需要上交给上级进行处理
          * Pair.first 数据获取接口
          * VirtualConnection* 结果获取
@@ -112,29 +117,25 @@ namespace muse::rpc{
          */
         void trigger(uint32_t data_size, std::shared_ptr<char[]> _full_data, Servlet servlet, VirtualConnection *vir);
 
-        /*
+        /**
          * 执行实际的任务，对完整报文进行解析！
          * 由线程池执行！
          * */
         void triggerTask(uint32_t data_size, std::shared_ptr<char[]> _full_data, Servlet servlet, VirtualConnection *vc);
 
-        /* 关闭一个 connect udp socket,并且将其从 epoll 中 移除 */
+        /** 关闭一个 connect udp socket,并且将其从 epoll 中 移除 */
         void closeSocket(VirtualConnection *vc) const;
 
-        /* 需要改造，不应该拥有迭代器，而应该只拥有发送的数据 */
+        /** 需要改造，不应该拥有迭代器，而应该只拥有发送的数据 */
         void sendResponseDataToClient(VirtualConnection *vir, uint64_t _message_id);
 
         void checkDeleteSocket(VirtualConnection *vir);
     public:
-        /*
-         * 主反应堆 将新链接传输到 从反应堆的接口
-         * 有一次内存复制, 丢到 connections 和 Epoll loop 中
-         */
+        /** 主反应堆 将新链接传输到 从反应堆的接口
+         * 有一次内存复制, 丢到 connections 和 Epoll loop 中 */
         bool acceptConnection(int _socketFd, size_t _recv_length, sockaddr_in addr ,const std::shared_ptr<char[]>& data, bool new_connection);
-        /*
-         * 构造函数
-         * 需要注入一个内存储
-         */
+        /** 构造函数
+         * 需要注入一个内存储 */
         SubReactor(uint16_t _port, int _open_max_connection,std::shared_ptr<std::pmr::synchronized_pool_resource> _pool);
         SubReactor(const SubReactor &other) = delete;
         SubReactor& operator=(const SubReactor &other) = delete;

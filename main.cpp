@@ -53,26 +53,6 @@ std::vector<double> test_fun2(const std::vector<double>& scores){
     return tr;
 }
 
-class zlibService: public middleware_service{
-public:
-    zlibService() = default;
-    ~zlibService() override = default;
-
-    //数据输入 解压、解密
-    std::tuple<std::shared_ptr<char[]>, size_t , std::shared_ptr<std::pmr::synchronized_pool_resource>>
-    In(std::shared_ptr<char[]> data, size_t data_size, std::shared_ptr<std::pmr::synchronized_pool_resource> _memory_pool) override{
-        printf("jie ya\n");
-        return std::make_tuple(data, data_size, _memory_pool);
-    };
-
-    //数据输出 压缩、加密
-    std::tuple<std::shared_ptr<char[]>, size_t , std::shared_ptr<std::pmr::synchronized_pool_resource>>
-    Out(std::shared_ptr<char[]> data, size_t data_size, std::shared_ptr<std::pmr::synchronized_pool_resource> _memory_pool) override{
-        printf("ya suo\n");
-        return std::make_tuple(data, data_size, _memory_pool);
-    };
-};
-
 int read_str(std::string message, const std::vector<double>& scores){
     return (int)message.size();
 }
@@ -80,11 +60,20 @@ int read_str(std::string message, const std::vector<double>& scores){
 
 
 int main() {
+    //注册中间件
+    MiddlewareChannel::configure<ZlibService>();  //解压缩
+    MiddlewareChannel::configure<RouteService>(Singleton<Registry>(), Singleton<SynchronousRegistry>()); //方法的路由
+
     /* 设置线程池 */
     ThreadPoolSetting::MinThreadCount = 4;
     ThreadPoolSetting::MaxThreadCount = 4;
     ThreadPoolSetting::TaskQueueLength = 4096;
     ThreadPoolSetting::DynamicThreadVacantMillisecond = 3000ms;
+
+    //启动线程池
+    GetThreadPoolSingleton();
+    // 启动日志
+    InitSystemLogger();
 
     //绑定方法的例子
     Normal normal(10, "remix");
@@ -99,14 +88,6 @@ int main() {
         return 10 + val;
     });
 
-    //注册中间件
-    MiddlewareChannel::configure<ZlibService>();  //解压缩
-    MiddlewareChannel::configure<RouteService>(Singleton<Registry>(), Singleton<SynchronousRegistry>()); //方法的路由
-
-    //启动线程池
-    GetThreadPoolSingleton();
-    // 启动日志
-    InitSystemLogger();
     // 开一个线程启动反应堆,等待请求
     Reactor reactor(15000, 2,1500, ReactorRuntimeThread::Asynchronous);
 

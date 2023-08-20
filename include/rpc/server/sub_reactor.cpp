@@ -9,8 +9,14 @@ namespace muse::rpc{
 
     bool SubReactor::acceptConnection(int _socketFd, size_t _recv_length, sockaddr_in addr, const std::shared_ptr<char[]>& data , bool new_connection) {
         if (this->runState.load(std::memory_order_release)){
-            std::lock_guard<std::mutex> lock(newConLocker);
-            newConnections.emplace(_socketFd, _recv_length, addr,  data,new_connection);
+            {
+                //加入队列中
+                std::lock_guard<std::mutex> lock(newConLocker);
+                newConnections.emplace(_socketFd, _recv_length, addr,  data,new_connection);
+            }
+            //唤醒 epoll
+            struct epoll_event ree{ EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP, {.fd = epoll_switch_fd} };
+            epoll_ctl(epollFd, EPOLL_CTL_MOD ,epoll_switch_fd, &ree);
             return true;
         }
         return false;
@@ -37,7 +43,6 @@ namespace muse::rpc{
     }
 
     void SubReactor::loop() {
-        SPDLOG_INFO("SubReactor Start run ");
         //创建 epoll
         if ((epollFd = epoll_create(128)) == -1){
             SPDLOG_ERROR("Sub-Reactor loop function failed epoll fd created failed!");
@@ -50,18 +55,41 @@ namespace muse::rpc{
         constexpr unsigned int bufferSize = Protocol::FullPieceSize + 1;
         //接受缓存区
         char recvBuf[bufferSize] = { '\0' };
-        //启动从引擎
-        uint32_t counter = 0;
+
+        epoll_switch_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if (epoll_switch_fd == -1){
+            SPDLOG_ERROR("Sub Reactor epoll epoll_switch_fd create failed!");
+            return;
+        }else{
+            //开关加入
+            struct epoll_event ree{ EPOLLIN, {.fd = epoll_switch_fd} };
+            if( epoll_ctl(epollFd, EPOLL_CTL_ADD, epoll_switch_fd, &ree) == - 1 ){
+                close(epoll_switch_fd); //关闭 socket
+                SPDLOG_ERROR("Epoll Operation EPOLL_CTL_ADD failed in Sub-Reactor deal with new Connection errno {} !", errno);
+            }else{
+                SPDLOG_INFO("Sub-Reactor add socket {} to epoll loop!", epoll_switch_fd);
+            }
+        }
         while (runState.load(std::memory_order_relaxed)){
             auto timer_out = treeTimer.checkTimeout();
-            long tm = 10;
-            if (timer_out >= 0 && timer_out < 30) {
-                tm = timer_out;
+            auto readyCount = epoll_wait(epollFd, epollQueue,openMaxConnection , timer_out);
+            //处理定时器，执行一些因为延迟还未执行的定时任务，避免非法数据驻留
+            {
+                //处理发送任务
+                std::lock_guard<std::mutex> lock(treeTimer_mtx);
+                treeTimer.runTask();
             }
-            auto readyCount = epoll_wait(epollFd, epollQueue,openMaxConnection , tm);
+            //处理新的链接
+            dealWithNewConnection();
             //获得当前时间 毫秒
             auto now = GetNowTick();
             for (int i = 0; i < readyCount; ++i) {
+                if(epollQueue[i].events & EPOLLERR){
+                    auto cv = (VirtualConnection *)epollQueue[i].data.ptr;
+                    closeSocket(cv);
+                    SPDLOG_ERROR("epoll event EPOLLERR errno: {} {} {}", errno, cv->socket_fd, (uint32_t)epollQueue[i].events);
+                    throw std::runtime_error("exit"); //停掉服务直接退出
+                }
                 if (epollQueue[i].events & EPOLLIN){
                     //收到新链接
                     sockaddr_in addr{};
@@ -216,26 +244,18 @@ namespace muse::rpc{
                         SPDLOG_WARN("main Reactor receive 0 bytes data from ip {} port {} errno {}" ,inet_ntoa(addr.sin_addr)  ,ntohs(addr.sin_port), errno);
                     }
                 }
-                if (epollQueue[i].events & EPOLLERR){
-                    auto cv = (VirtualConnection *)epollQueue[i].data.ptr;
-                    closeSocket(cv);
-                    SPDLOG_ERROR("epoll event EPOLLERR errno: {} {} {}", errno, cv->socket_fd, (uint32_t)epollQueue[i].events);
-                    //throw std::runtime_error("exit"); //停掉服务直接退出
+                if (epollQueue[i].events & EPOLLOUT){
+                    struct epoll_event ree{ EPOLLIN, {.fd = epoll_switch_fd} };
+                    epoll_ctl(epollFd, EPOLL_CTL_MOD ,epoll_switch_fd, &ree);
                 }
-                else if (epollQueue[i].events & EPOLLHUP){
+                if (epollQueue[i].events & EPOLLHUP){
                     SPDLOG_ERROR("epoll event EPOLLHUP Event errno: {}", errno);
                     throw std::runtime_error("exit"); //停掉服务直接退出
                 }
-                else if (epollQueue[i].events & EPOLLRDHUP){
+                if (epollQueue[i].events & EPOLLRDHUP){
                     SPDLOG_ERROR("epoll event EPOLLRDHUP Event errno: {}", errno);
                     throw std::runtime_error("exit"); //停掉服务直接退出
                 }
-            }
-            dealWithNewConnection(); //处理新的链接
-            {
-                //处理发送任务
-                std::lock_guard<std::mutex> lock(treeTimer_mtx);
-                treeTimer.runTask();
             }
         }
     }
@@ -278,22 +298,11 @@ namespace muse::rpc{
                     activeConnectionsCount++;
 
                     vc = connections + findResult.second;
-                    struct epoll_event ReactorEpollEvent{ EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLRDHUP, {.ptr = vc} };
-
-                    if( epoll_ctl(epollFd, EPOLL_CTL_ADD, _socket_fd, &ReactorEpollEvent) == - 1 ){
-                        close(_socket_fd); //关闭 socket
-                        SPDLOG_ERROR("Epoll Operation EPOLL_CTL_ADD failed in Sub-Reactor deal with new Connection errno {} !", errno);
-                        continue;
-                    }else{
-                        SPDLOG_INFO("Sub-Reactor add socket {} to epoll loop!", _socket_fd);
-                    }
-                    //让链接断开的定时器
-                    treeTimer.setTimeout(SubReactor::ConnectionTimeOut.count(), &SubReactor::checkDeleteSocket,this, vc);
                 }
                 else{
                     size_t idx = 0;
-                    for (int i = 0; i < openMaxConnection; ++i) {
-                        idx = (lastEmptyPlace + i) % openMaxConnection;
+                    for (int k = 0; k < openMaxConnection; ++k) {
+                        idx = (lastEmptyPlace + k) % openMaxConnection;
                         if (connections[idx].socket_fd == _socket_fd ){
                             vc = &connections[idx];
                             SPDLOG_ERROR("Sub-Reactor NO Throw data! Find socket_fd {}", _socket_fd);
@@ -349,7 +358,7 @@ namespace muse::rpc{
                         setRequestTimeOutEvent(servlet);
                     }
 
-                    sendACK(_socket_fd, ACKNumber, header.timePoint);
+                    sendACK(_socket_fd, addr ,ACKNumber, header.timePoint);
                     if (ACKNumber == header.totalCount){ //最后一个了
                         vc->messages.emplace_back(header.timePoint); //存储ID
                         SPDLOG_INFO("Sub Reactor accept all data of the message_id {} {} {}", header.timePoint, _socket_fd, vc->messages.size());
@@ -361,7 +370,7 @@ namespace muse::rpc{
                 }
                 else if(header.type == ProtocolType::RequestACK){
                     if (it != messages.end()){
-                        sendACK(_socket_fd, it->second.getAckNumber(), header.timePoint);
+                        sendACK(_socket_fd, addr,it->second.getAckNumber(), header.timePoint);
                     }else{
                         SPDLOG_INFO("Sub-Reactor Send the StateReset successfully Protocol timePoint {}", header.timePoint);
                         sendReset(_socket_fd, header.timePoint, header.phase);
@@ -374,6 +383,20 @@ namespace muse::rpc{
                         SPDLOG_INFO("Sub-Reactor Send the StateReset successfully Protocol timePoint {}", header.timePoint);
                         sendReset(_socket_fd, header.timePoint, header.phase);
                     }
+                }
+                /* 处理完毕再加入 */
+                if (is_new){
+                    struct epoll_event ReactorEpollEvent{ EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLRDHUP, {.ptr = vc} };
+
+                    if( epoll_ctl(epollFd, EPOLL_CTL_ADD, _socket_fd, &ReactorEpollEvent) == - 1 ){
+                        close(_socket_fd); //关闭 socket
+                        SPDLOG_ERROR("Epoll Operation EPOLL_CTL_ADD failed in Sub-Reactor deal with new Connection errno {} !", errno);
+                        continue;
+                    }else{
+                        SPDLOG_INFO("Sub-Reactor add socket {} to epoll loop!", _socket_fd);
+                    }
+                    //让链接断开的定时器
+                    treeTimer.setTimeout(SubReactor::ConnectionTimeOut.count(), &SubReactor::checkDeleteSocket,this, vc);
                 }
             }
             else{
@@ -401,7 +424,6 @@ namespace muse::rpc{
     void SubReactor::checkDeleteSocket(VirtualConnection *vir){
         if (vir->socket_fd != -1 ){
             if ( GetNowTick() - vir->last_active > SubReactor::ConnectionTimeOut ){
-                SPDLOG_ERROR("This: port {} ip {}", vir->addr.sin_port, vir->addr.sin_addr.s_addr);
                 closeSocket(vir);
                 vir->socket_fd = -1;
                 vir->messages.clear();
@@ -435,6 +457,28 @@ namespace muse::rpc{
         }
     }
 
+    void SubReactor::sendACK(int _socket_fd, struct sockaddr_in addr, uint16_t _ack_number, uint64_t _message_id) {
+        //发送ACK
+        char ACKBuffer[muse::rpc::Protocol::protocolHeaderSize];
+        protocol_util.initiateSenderProtocolHeader(
+                ACKBuffer,
+                _message_id,
+                0,
+                muse::rpc::Protocol::protocolHeaderSize
+        );
+        protocol_util.setProtocolType(
+                ACKBuffer,
+                ProtocolType::ReceiverACK
+        );
+        protocol_util.setACKAcceptOrder(ACKBuffer, _ack_number);
+        auto result = sendto(_socket_fd, ACKBuffer,muse::rpc::Protocol::protocolHeaderSize, 0, (struct sockaddr*)&addr, sizeof(addr));
+        if (result == -1){
+            SPDLOG_ERROR("Sub-Reactor Send the ACK {} failed Protocol timePoint {}" ,_ack_number, _message_id);
+        }else{
+            SPDLOG_INFO("Sub-Reactor Send the ACK {} successfully Protocol timePoint {}", _ack_number, _message_id);
+        }
+    }
+
     /* 标识当前链接已经被重置了 */
     void SubReactor::sendReset(int _socket_fd, uint64_t _message_id, CommunicationPhase phase) {
         char buffer[muse::rpc::Protocol::protocolHeaderSize];
@@ -450,7 +494,7 @@ namespace muse::rpc{
         );
         auto result = write(_socket_fd, buffer,muse::rpc::Protocol::protocolHeaderSize);
         if (result == -1){
-            SPDLOG_ERROR("Sub-Reactor Send the StateReset failed Protocol timePoint {}" ,_message_id);
+            SPDLOG_ERROR("Sub-Reactor Send the StateReset failed Protocol timePoint {} errno {}" ,_message_id, errno);
         }
     }
 
@@ -575,10 +619,13 @@ namespace muse::rpc{
         } catch (const std::exception &ex) {
             SPDLOG_ERROR("Sub-Reactor setTimeout failed!");
         }
-        SPDLOG_WARN("triggerTask Finish");
     }
     /* 关闭 */
     void SubReactor::stop() {
+        // 唤醒 epoll
+        struct epoll_event ree{ EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP, {.fd = epoll_switch_fd} };
+        epoll_ctl(epollFd, EPOLL_CTL_MOD ,epoll_switch_fd, &ree);
+        // 发起信号
         runState.store(false,std::memory_order_relaxed);
         //停止所有的线程
         if (runner != nullptr && runner->joinable()){

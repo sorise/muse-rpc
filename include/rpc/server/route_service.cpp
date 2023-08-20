@@ -56,7 +56,6 @@ namespace muse::rpc{
     std::tuple<std::shared_ptr<char[]>, size_t, std::shared_ptr<std::pmr::synchronized_pool_resource>>
     RouteService::Out(std::shared_ptr<char[]> data, size_t data_size,
                       std::shared_ptr<std::pmr::synchronized_pool_resource> _memory_pool) {
-        SPDLOG_INFO("Route Server finish process");
         return std::make_tuple(data, data_size, _memory_pool);
     }
 

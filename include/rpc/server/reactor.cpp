@@ -60,7 +60,6 @@ namespace muse::rpc{
             SPDLOG_ERROR("socket bind port {} error, errno {}", port, errno);
             throw ReactorException("[Main-Reactor]", ReactorError::SocketBindFailed);
         }
-
         uint32_t events = EPOLLIN | EPOLLERR | EPOLLHUP| EPOLLRDHUP;
 
         struct epoll_event ReactorEpollEvent{events, {.fd = socketFd} };
@@ -106,15 +105,16 @@ namespace muse::rpc{
                     auto recvLen = recvfrom(epollQueue[i].data.fd, dp, bufferSize, 0 ,(struct sockaddr*)&addr, &len);
                     SPDLOG_INFO("Main-Reactor receive new udp connection from ip {} port {}" ,inet_ntoa(addr.sin_addr)  ,ntohs(addr.sin_port));
 
+                    //判断是否能够解析成功
                     bool isSuccess = false;
                     auto header = protocol.parse(dt.get(), recvLen, isSuccess);
                     if (!isSuccess){
-                        //协议格式不正确
+                        //解析失败、协议格式不正确
                         std::string message {"Please use the correct network protocol！\n"};
                         sendto(socketFd, message.c_str() , sizeof(char)*message.size(),0, (struct sockaddr*)&addr, sizeof(addr));
                         continue; //直接下一个
                     }
-                    //创建 一个三元组
+                    //解析成功，创建 一个二元组
                     Peer peer(ntohs(addr.sin_port), ntohl(addr.sin_addr.s_addr));
                     //查找
                     auto it= GlobalEntry::con_queue->find(peer);
@@ -128,7 +128,8 @@ namespace muse::rpc{
                     int sonSocketFd = -1;
                     if ((sonSocketFd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
                         SPDLOG_WARN("Main-Reactor create connect udp socket failed， errno: {}", errno);
-                    } else {
+                    }
+                    else {
                         //地址、端口复用 端口复用
                         setsockopt(sonSocketFd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
                         setsockopt(sonSocketFd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
@@ -162,14 +163,19 @@ namespace muse::rpc{
             }
             //处理定时器任务
         }
-
         SPDLOG_INFO("Sub -Reactor die!");
     }
+
 
     void Reactor::stop() noexcept {
         runState.store(false, std::memory_order_release);
         if (runner != nullptr){
+            //关闭主反应堆
             if (runner->joinable()) runner->join();
+        }
+        //关闭从反应堆
+        for (auto &sub: subs ) {
+            sub->stop();
         }
     }
 
@@ -195,6 +201,7 @@ namespace muse::rpc{
             }
         }
     }
+
     void Reactor::startSubReactor() {
         for (int i = 0; i < subReactorCount; ++i) {
             if (subs[i] != nullptr){

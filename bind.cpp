@@ -175,6 +175,44 @@ void test_v(){
 }
 
 int main(int argc, char *argv[]){
-    test_v();
+    int epollFd = -1;
+    //创建 epoll
+    if ((epollFd = epoll_create(128)) == -1){
+        SPDLOG_ERROR("Sub-Reactor loop function failed epoll fd created failed!");
+    }
+    struct epoll_event epollQueue[50];
+
+    int socket_virtual_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    struct epoll_event ReactorEpollEvent{ EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLRDHUP, {.fd = socket_virtual_fd} };
+
+    if( epoll_ctl(epollFd, EPOLL_CTL_ADD, socket_virtual_fd, &ReactorEpollEvent) == - 1 ){
+        close(socket_virtual_fd); //关闭 socket
+        SPDLOG_ERROR("Epoll Operation EPOLL_CTL_ADD failed in Sub-Reactor deal with new Connection errno {} !", errno);
+    }else{
+        SPDLOG_INFO("Sub-Reactor add socket {} to epoll loop!", socket_virtual_fd);
+    }
+
+    std::thread task([&](){
+       std::this_thread::sleep_for(30000ms);
+        SPDLOG_INFO("Change it alter OUT to only EPOLL IN");
+        struct epoll_event ree{ EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP, {.fd = socket_virtual_fd} };
+        epoll_ctl(epollFd, EPOLL_CTL_MOD ,socket_virtual_fd, &ree);
+    });
+
+    auto readyCount = epoll_wait(epollFd, epollQueue, 50 , -1);
+    for (int i = 0; i < readyCount; ++i) {
+        if(epollQueue[i].events & EPOLLERR){
+            SPDLOG_INFO("ERROR!!!!");
+        }
+        if (epollQueue[i].events & EPOLLIN){
+            SPDLOG_INFO("EPOLLIN!!!!");
+        }
+        if (epollQueue[i].events & EPOLLOUT){
+            SPDLOG_INFO("EPOLLOUT!!!!");
+        }
+    }
+
+    task.join();
+
     return 0;
 }

@@ -17,7 +17,6 @@ using namespace muse::rpc;
 using namespace muse::serializer;
 
 namespace muse::rpc{
-    class Transmitter;
 
     /* 包装一个发送任务 */
     class TransmitterEvent{
@@ -27,7 +26,6 @@ namespace muse::rpc{
         std::string remote_process_name;    // 方法名称
         BinarySerializer serializer;        // 数据位置
         std::function<void(ResponseData)> callBack;  // 回调函数
-        uint64_t message_id;
         bool is_set_callback;
         bool is_set_remote_func;
     private:
@@ -181,7 +179,6 @@ namespace muse::rpc{
         virtual ~TransmitterEvent();
         [[nodiscard]] bool get_callBack_state() const;
         [[nodiscard]] bool get_remote_state() const;
-        [[nodiscard]] const uint64_t & get_message_id() const;
         const BinarySerializer& get_serializer();
 
         const std::string&  get_ip_address();

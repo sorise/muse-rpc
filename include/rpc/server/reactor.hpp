@@ -24,6 +24,7 @@
 #include "../memory/conf.hpp"
 #include "global_entry.hpp"
 #include "spdlog/spdlog.h"
+#include "../client/transmitter.hpp"
 
 /* 主要负责建立链接 */
 namespace muse::rpc{
@@ -42,18 +43,19 @@ namespace muse::rpc{
         int epollFd;                                                    // EPOLL ID
         int socketFd;                                                   // Socket ID
         std::atomic<bool> runState {false};                           // 运行状态
-        void loop();                                                    // 开启 EPOLL 循环
         std::shared_ptr<std::thread> runner;                            // 运行线程
         ReactorRuntimeThread type;                                      // 运行方式
-        std::shared_ptr<std::pmr::synchronized_pool_resource> pool;
+        std::shared_ptr<std::pmr::synchronized_pool_resource> pool;     // 内存池
         uint32_t subReactorCount;                                       // 从反应堆的数量
-        uint32_t counter;
-        uint32_t openMaxConnection;
+        uint32_t counter;                                               // 计数器
+        uint32_t openMaxConnection;                                     // 每个从反应堆维持的虚拟链接数量
         std::vector<std::unique_ptr<SubReactor>> subs;                  // 从反应堆s
-        Protocol protocol;
+        Protocol protocol;                                              // 协议对象
     private:
         /* 启动从反应堆 */
         void startSubReactor();
+        /* 开启 EPOLL 循环， start 方法启动的就是这个函数 */
+        void loop();
     public:
         Reactor(uint16_t _port, uint32_t _sub_reactor_count, uint32_t _open_max_connection, ReactorRuntimeThread _type);
         Reactor(const Reactor &other) = delete; //拷贝也不行

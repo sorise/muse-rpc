@@ -127,8 +127,8 @@ void test_v(){
     transmitter.set_request_timeout(1500);
     transmitter.set_response_timeout(2000);
 
-    for (int i = 0; i < 200; ++i) {
-        TransmitterEvent event("125.91.127.142", 15000);
+    for (int i = 0; i < 5; ++i) {
+        TransmitterEvent event("127.0.0.1", 15000);
         event.call<int>("test_fun1", i);
         event.set_callBack([](Outcome<int> t){
             if (t.isOK()){
@@ -149,7 +149,8 @@ void test_v(){
         });
         transmitter.send(std::move(event));
     }
-    std::cin.get();
+
+    transmitter.stop();
 }
 
 int main(int argc, char *argv[]){

@@ -58,7 +58,6 @@ int read_str(std::string message, const std::vector<double>& scores){
 }
 
 
-
 int main() {
     //注册中间件
     MiddlewareChannel::configure<ZlibService>();  //解压缩
@@ -89,7 +88,7 @@ int main() {
     });
 
     // 开一个线程启动反应堆,等待请求
-    Reactor reactor(15000, 2,1500, ReactorRuntimeThread::Asynchronous);
+    ReactorTransmitter reactor(15000, 2,1500, ReactorRuntimeThread::Asynchronous);
 
     try {
         //开始运行

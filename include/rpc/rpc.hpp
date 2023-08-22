@@ -1,6 +1,3 @@
-//
-// Created by remix on 23-7-16.
-//
 #ifndef MUSE_SERVER_RPC_HPP
 #define MUSE_SERVER_RPC_HPP
 #include "protocol/protocol.hpp"
@@ -20,8 +17,6 @@
 #include "server/middleware_channel.hpp"
 #include "server/middleware_service.hpp"
 #include "server/virtual_connection.hpp"
-#include "server/reactor_transmitter.hpp"
-
 
 //异步方法，也就是当前方法可以同时被多个线程同时执行
 #define muse_bind_async(...) \

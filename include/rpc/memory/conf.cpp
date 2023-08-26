@@ -7,7 +7,7 @@ namespace muse::rpc{
     std::pmr::synchronized_pool_resource* make_memory_pool(){
         std::pmr::pool_options option;
         option.largest_required_pool_block = 1024*1024*5; //5M
-        option.max_blocks_per_chunk = 2048; //每一个chunk有多少个block
+        option.max_blocks_per_chunk = 4096; //每一个chunk有多少个block
         auto *pool = new std::pmr::synchronized_pool_resource(option);
         return pool;
     }

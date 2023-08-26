@@ -63,7 +63,11 @@ namespace muse::rpc {
          @_worker_count 工作线程数量
          @_queue_size 线程池任务队列数
          */
-        explicit Transmitter(const int& _port, const std::shared_ptr<ThreadPool>& _workers = nullptr);
+        explicit Transmitter(const uint16_t & _port, const std::shared_ptr<ThreadPool>& _workers = nullptr);
+
+        /* flag 参数没有任何意义，仅仅是为了和另一个构造函数区分开，防止误用 */
+        Transmitter(bool flag , int socket_fd, const std::shared_ptr<ThreadPool>& _workers = nullptr);
+
 
         bool send(TransmitterEvent &&event);
 
@@ -82,8 +86,9 @@ namespace muse::rpc {
         void stop_immediately() noexcept;
 
         virtual ~Transmitter();
-    private:
-        void loop();
+    protected:
+        /* 用于发送和接受数据 */
+        virtual void loop();
         /* 将数据发生给服务器 */
         void send_data(const std::shared_ptr<TransmitterTask>& task);
 
@@ -104,8 +109,9 @@ namespace muse::rpc {
 
         void send_heart_beat(const std::shared_ptr<TransmitterTask>& task, CommunicationPhase phase);
 
-        void try_trigger(const std::shared_ptr<TransmitterTask>& msg);
-    private:
+        virtual void try_trigger(const std::shared_ptr<TransmitterTask>& msg);
+
+    protected:
         std::chrono::milliseconds recv_gap {Transmitter_Read_GAP};
         /* 控制超时时间 毫秒值 */
         std::chrono::milliseconds request_timeout {Transmitter_Request_TimeOut};
@@ -122,6 +128,8 @@ namespace muse::rpc {
         TimerTree timer; //定时器
         std::mutex timer_mtx;
         std::mutex new_messages_mtx;
+
+        std::mutex condition_mtx;
         std::condition_variable condition; //条件变量 用于阻塞或者唤醒线程
         Message_Queue messages;
         Message_Queue new_messages;         //新发送任务

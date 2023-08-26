@@ -57,7 +57,6 @@ int read_str(std::string message, const std::vector<double>& scores){
     return (int)message.size();
 }
 
-
 int main() {
     //注册中间件
     MiddlewareChannel::configure<ZlibService>();  //解压缩
@@ -88,16 +87,41 @@ int main() {
     });
 
     // 开一个线程启动反应堆,等待请求
-    ReactorTransmitter reactor(15000, 2,1500, ReactorRuntimeThread::Asynchronous);
+    Reactor reactor(15000, 2,2000, ReactorRuntimeThread::Asynchronous);
 
     try {
         //开始运行
-        reactor.start();
+        reactor.start(true);
     }catch (const ReactorException &ex){
         SPDLOG_ERROR("Main-Reactor start failed!");
     }
 
+    //等待发送器启动完毕
+    reactor.wait_transmitter();
+
+    for (int i = 0; i < 5; ++i) {
+        TransmitterEvent event("125.91.127.142", 15000);
+        event.call<int>("test_fun1", i);
+        event.set_callBack([](Outcome<int> t){
+            if (t.isOK()){
+                printf("OK lambda %d \n", t.value);
+            }else{
+                //调用失败
+                if (t.protocolReason == FailureReason::OK){
+                    //错误原因是RPC错误
+                    std::printf("rpc error\n");
+                    std::cout << t.response.getReason() << std::endl;
+                    //返回 int 值对应 枚举 RpcFailureReason
+                }else{
+                    //错误原因是网络通信过程中的错误
+                    std::printf("internet error\n");
+                    std::cout << (short)t.protocolReason << std::endl; //错误原因
+                }
+            }
+        });
+        reactor.send(std::move(event));
+    }
+
     std::cin.get();
-    reactor.stop();
     spdlog::default_logger()->flush(); //刷新日志
 }

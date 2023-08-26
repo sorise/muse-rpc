@@ -10,11 +10,15 @@
 
 namespace muse::rpc{
 
-    extern std::chrono::microseconds GetNowTickMicroseconds();
+    std::chrono::microseconds GetNowTickMicroseconds();
+
+    std::chrono::microseconds GetNowTickSeconds();
 
     /* 纳秒 ID message id */
     uint64_t GlobalMicrosecondsId();
 
+    /* 用于 */
+    uint64_t GlobalSecondsId();
 }
 
 

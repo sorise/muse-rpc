@@ -7,8 +7,8 @@
 namespace muse::rpc {
 
     TransmitterTask::TransmitterTask(TransmitterEvent && _event, const uint64_t& _message_id)
-            :event(std::move(_event)),
-             phase(CommunicationPhase::Request), message_id(_message_id),data(nullptr),response_data()
+    :event(std::move(_event)),
+     phase(CommunicationPhase::Request), message_id(_message_id),data(nullptr),response_data()
     {
         if(1 != inet_aton(event.get_ip_address().c_str(),&server_address.sin_addr)){
             throw ClientException("ip address not right", ClientError::IPAddressError);
@@ -17,9 +17,9 @@ namespace muse::rpc {
         server_address.sin_port = htons(event.get_port());
     }
 
-    Transmitter::Transmitter(const int& _port, const std::shared_ptr<ThreadPool>& _workers):
-            workers(_workers),
-            port(_port)
+    Transmitter::Transmitter(const uint16_t& _port, const std::shared_ptr<ThreadPool>& _workers):
+    workers(_workers),
+    port(_port)
     {
         this->socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
         if(this->socket_fd == -1){
@@ -41,21 +41,25 @@ namespace muse::rpc {
     }
 
     Transmitter::~Transmitter() {
-        run_state.store(false, std::memory_order_release);
+        run_state.store(false, std::memory_order_relaxed);
+        condition.notify_one();
         //等待线程死掉
         if (runner != nullptr){
             if (runner->joinable()) runner->join();
             //SPDLOG_INFO("Runner die!");
         }
-
     }
 
     //开启迭代器
     void Transmitter::loop() {
         while (run_state.load(std::memory_order::memory_order_relaxed)){
-            if (new_messages.empty() && messages.empty()){
-                std::this_thread::yield();
-            }
+            /* 阻塞当前工作线程，防止CPU空转 */
+            std::unique_lock<std::mutex> uniqueLock(condition_mtx);
+            condition.wait(uniqueLock, [this]{
+                if(!run_state.load(std::memory_order::memory_order_relaxed))
+                    return true;
+                return !new_messages.empty() ||  !messages.empty();
+            });
             // 持有锁,处理新到的链接
             {
                 std::unique_lock<std::mutex> lock(new_messages_mtx);
@@ -64,7 +68,7 @@ namespace muse::rpc {
                     for (auto &it: new_messages) {
                         if (messages.count(it.first) == 0){
                             messages[it.first] = it.second;
-                            //SPDLOG_INFO("Transmitter add message {} ", it.second->message_id);
+                            SPDLOG_INFO("Transmitter add message {} ", it.second->message_id);
                         }
                     }
                     //清楚所有的信息
@@ -227,6 +231,7 @@ namespace muse::rpc {
                 if (messages.count(taskPtr->message_id) == 0)
                 {
                     messages[taskPtr->message_id] =  taskPtr;
+                    condition.notify_one();
                     return true;
                 }
             }
@@ -307,7 +312,7 @@ namespace muse::rpc {
                 auto result = workers->commit_executor(ex);
                 if (!result.isSuccess){
                     //如果提交失败咋办？
-                    //SPDLOG_ERROR("Transmitter::trigger commit to thread pool error!", msg->message_id);
+                    SPDLOG_ERROR("Transmitter::trigger commit to thread pool error!", msg->message_id);
                     //开线程
                     auto fu = std::async(std::launch::async,&Transmitter::trigger, this, msg->message_id);
                 }
@@ -316,6 +321,7 @@ namespace muse::rpc {
             }
         }
     }
+
     void Transmitter::response_timeout_event(uint64_t message_id, std::chrono::milliseconds last_active) {
         auto it = messages.find(message_id);
         if (it != messages.end()){
@@ -443,9 +449,17 @@ namespace muse::rpc {
             std::this_thread::sleep_for(10ms);
         }
         run_state.store(false, std::memory_order_relaxed);
+        condition.notify_one();
     }
 
     void Transmitter::stop_immediately() noexcept {
         run_state.store(false, std::memory_order_relaxed);
+        condition.notify_one();
+    }
+
+    Transmitter::Transmitter(bool flag ,int _socket_fd, const std::shared_ptr<ThreadPool> &_workers)
+    :socket_fd(_socket_fd),workers(_workers){
+        if(_socket_fd <= 0) throw ClientException("socket fd not right", ClientError::SocketFDError);;
+        pool = MemoryPoolSingleton();
     }
 } // muse::rpc

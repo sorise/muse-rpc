@@ -45,6 +45,7 @@ add_library(rpc SHARED
         ${CMAKE_SOURCE_DIR}/include/rpc/server/peer.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/synchronous_registry.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/server/global_entry.cpp
+        ${CMAKE_SOURCE_DIR}/include/rpc/server/transmitter_link_reactor.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/response_data.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/invoker.cpp
         ${CMAKE_SOURCE_DIR}/include/rpc/client/client.cpp

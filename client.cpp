@@ -149,8 +149,59 @@ void test_v(){
         });
         transmitter.send(std::move(event));
     }
+    std::this_thread::sleep_for(200ms);
+    //transmitter.stop();
 
-    transmitter.stop();
+    for (int i = 0; i < 5; ++i) {
+        TransmitterEvent event("127.0.0.1", 15000);
+        event.call<int>("test_fun1", i);
+        event.set_callBack([](Outcome<int> t){
+            if (t.isOK()){
+                printf("OK lambda %d \n", t.value);
+            }else{
+                //调用失败
+                if (t.protocolReason == FailureReason::OK){
+                    //错误原因是RPC错误
+                    std::printf("rpc error\n");
+                    std::cout << t.response.getReason() << std::endl;
+                    //返回 int 值对应 枚举 RpcFailureReason
+                }else{
+                    //错误原因是网络通信过程中的错误
+                    std::printf("internet error\n");
+                    std::cout << (short)t.protocolReason << std::endl; //错误原因
+                }
+            }
+        });
+        transmitter.send(std::move(event));
+
+    }
+    std::this_thread::sleep_for(400ms);
+
+    for (int i = 0; i < 5; ++i) {
+        TransmitterEvent event("127.0.0.1", 15000);
+        event.call<std::vector<double>>("test_fun2", score);
+        event.set_callBack([](Outcome<std::vector<double>> t){
+            if (t.isOK()){
+                printf("OK lambda size: %zu \n", t.value.size());
+            }else{
+                //调用失败
+                if (t.protocolReason == FailureReason::OK){
+                    //错误原因是RPC错误
+                    std::printf("rpc error\n");
+                    std::cout << t.response.getReason() << std::endl;
+                    //返回 int 值对应 枚举 RpcFailureReason
+                }else{
+                    //错误原因是网络通信过程中的错误
+                    std::printf("internet error\n");
+                    std::cout << (short)t.protocolReason << std::endl; //错误原因
+                }
+            }
+        });
+        transmitter.send(std::move(event));
+
+    }
+
+    std::cin.get();
 }
 
 int main(int argc, char *argv[]){

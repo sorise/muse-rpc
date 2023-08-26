@@ -8,7 +8,7 @@
 namespace muse::rpc{
 
     bool SubReactor::acceptConnection(int _socketFd, size_t _recv_length, sockaddr_in addr, const std::shared_ptr<char[]>& data , bool new_connection) {
-        if (this->runState.load(std::memory_order_release)){
+        if (this->runState.load(std::memory_order_relaxed)){
             {
                 //加入队列中
                 std::lock_guard<std::mutex> lock(newConLocker);
@@ -67,7 +67,7 @@ namespace muse::rpc{
                 close(epoll_switch_fd); //关闭 socket
                 SPDLOG_ERROR("Epoll Operation EPOLL_CTL_ADD failed in Sub-Reactor deal with new Connection errno {} !", errno);
             }else{
-                SPDLOG_INFO("Sub-Reactor add socket {} to epoll loop!", epoll_switch_fd);
+                SPDLOG_INFO("Sub-Reactor start loop!", epoll_switch_fd);
             }
         }
         while (runState.load(std::memory_order_relaxed)){
@@ -284,13 +284,11 @@ namespace muse::rpc{
                 VirtualConnection *vc = nullptr;
                 if (is_new){
                     auto findResult = findConnectionsEmptyPlace();
-
                     if (!findResult.first){
                         sendExhausted(_socket_fd);
                         close(_socket_fd);
                         continue; //下一个 好
                     }
-
                     connections[findResult.second].socket_fd = _socket_fd;
                     connections[findResult.second].last_active = GetNowTick();
                     connections[findResult.second].addr = addr;
@@ -410,12 +408,14 @@ namespace muse::rpc{
 
     SubReactor::~SubReactor() {
         runState.store(false, std::memory_order_release);
+        //唤醒 epoll
+        struct epoll_event ree{ EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP, {.fd = epoll_switch_fd} };
+        epoll_ctl(epollFd, EPOLL_CTL_MOD ,epoll_switch_fd, &ree);
         //等待线程结束
         if (runner != nullptr){
             if (runner->joinable()) runner->join();
         }
         if (epollFd != -1) close(epollFd);
-
         delete [] connections;
         connections = nullptr;
         SPDLOG_INFO("Sub-Reactor end life!");
@@ -638,7 +638,7 @@ namespace muse::rpc{
         /* 清楚所有的消息 */
         messages.clear();
         //关闭 epoll
-        close(epollFd);
+        if (epollFd != -1) close(epollFd);
     }
 
     void SubReactor::closeSocket(VirtualConnection *vc) const {

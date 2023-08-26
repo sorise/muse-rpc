@@ -20,6 +20,10 @@ namespace muse::rpc{
 
     /* 析构函数 */
     Reactor::~Reactor() {
+        for (auto &sub: subs) {
+            sub->stop();
+        }
+
         runState.store(false, std::memory_order_release);
         if (runner != nullptr){
             if (runner->joinable()) runner->join();
@@ -75,10 +79,17 @@ namespace muse::rpc{
         struct epoll_event epollQueue[10]; //啥用也没有！！
         //启动
         runState.store(true, std::memory_order_release);
+        //启动发射器
+        if (is_start_transmitter) start_transmitter();
         //启动从引擎
         startSubReactor(); //失败直接抛出异常
         //开始循环
         while (runState.load(std::memory_order_relaxed)){
+            //先处理定时器任务
+            {
+                std::lock_guard<std::mutex> lock(GlobalEntry::mtx);
+                GlobalEntry::timerTree->runTask();
+            }
             //处于阻塞状态
             auto readyCount = epoll_wait(epollFd, epollQueue,10 , 10);
             for (int i = 0; i < readyCount; ++i) {
@@ -113,6 +124,13 @@ namespace muse::rpc{
                         std::string message {"Please use the correct network protocol！\n"};
                         sendto(socketFd, message.c_str() , sizeof(char)*message.size(),0, (struct sockaddr*)&addr, sizeof(addr));
                         continue; //直接下一个
+                    }
+                    if (transmitter_linker != nullptr){
+                        Servlet servlet(header.timePoint,ntohs(addr.sin_port), ntohl(addr.sin_addr.s_addr));
+                        if(GlobalEntry::active_queue->count(servlet) > 0){
+                            transmitter_linker->acceptNewData(header.timePoint, dt, recvLen, addr);
+                            continue; //下一个
+                        }
                     }
                     //解析成功，创建 一个二元组
                     Peer peer(ntohs(addr.sin_port), ntohl(addr.sin_addr.s_addr));
@@ -157,13 +175,7 @@ namespace muse::rpc{
                     }
                 }
             }
-            {
-                std::lock_guard<std::mutex> lock(GlobalEntry::mtx);
-                GlobalEntry::timerTree->runTask();
-            }
-            //处理定时器任务
         }
-        SPDLOG_INFO("Sub -Reactor die!");
     }
 
 
@@ -179,7 +191,8 @@ namespace muse::rpc{
         }
     }
 
-    void Reactor::start(){
+    void Reactor::start(bool _is_start_transmitter){
+        this->is_start_transmitter = _is_start_transmitter;
         //首先创建 sub_reactor
         try {
             for (int i = 0; i < subReactorCount; ++i) {
@@ -207,6 +220,47 @@ namespace muse::rpc{
             if (subs[i] != nullptr){
                 subs[i]->start();
             }
+        }
+    }
+
+    bool Reactor::send(TransmitterEvent && event) {
+        if (transmitter_linker != nullptr && runState.load(std::memory_order_relaxed) ){
+            sockaddr_in server_address {};
+            if(1 != inet_aton(event.get_ip_address().c_str(),&server_address.sin_addr))
+                throw ClientException("ip address not right", ClientError::IPAddressError);
+
+            auto msg_id = GlobalSecondsId();
+            Servlet servlet(msg_id,  event.port,  ntohl(server_address.sin_addr.s_addr));
+            {
+                std::lock_guard<std::mutex> lock(GlobalEntry::mtx_active_queue);
+                GlobalEntry::active_queue->insert(servlet);
+            }
+            transmitter_linker->send(std::forward<TransmitterEvent&&>(event), msg_id);
+            return true;
+        }
+        return false;
+    }
+
+    void Reactor::start_transmitter() {
+        if (transmitter_linker == nullptr){
+            try{
+                transmitter_linker = std::make_unique<TransmitterLinkReactor>(this->socketFd,GetThreadPoolSingleton());
+                if (transmitter_linker != nullptr){
+                    //启动 发射器
+                    transmitter_linker->start(TransmitterThreadType::Asynchronous); //异步，启动
+                }
+            } catch (std::exception &exp) {
+                throw ReactorException("[Main-Reactor]", ReactorError::CreateTransmitterThreadFailed);
+            }
+
+        }
+    }
+
+    void Reactor::wait_transmitter() {
+        //没有启动发射器 直接返回
+        if (!is_start_transmitter) return;
+        while ( transmitter_linker == nullptr || !transmitter_linker->start_finish()){
+            std::this_thread::sleep_for(10ms);
         }
     }
 }

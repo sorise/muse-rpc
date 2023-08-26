@@ -22,6 +22,7 @@ namespace muse::rpc{
         SocketBindFailed,
         CreateSubReactorFailed,
         CreateMainReactorThreadFailed,
+        CreateTransmitterThreadFailed,
         MemoryPoolCreateFailed,
         PieceStateOutBound,  // 访问越界错误
     };

@@ -91,7 +91,7 @@ namespace muse::serializer{
     };
 
     /* 获取当前主机采用的字节序 */
-    ByteSequence getByteSequence();
+     ByteSequence getByteSequence();
 
     //获取元组长度 01
     template<typename T>

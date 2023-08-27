@@ -45,3 +45,5 @@ int main() {
 
 #### 问题 8 socket是线程安全的吗
 多线程并发读/写同一个TCP socket 是 线程安全 的，因为TCP socket 的读/写操作都上锁了。
+
+#### 问题 9 如何传递客户端请求 IP/Port 给方法

@@ -10,6 +10,7 @@ namespace muse::rpc{
     RouteService::In(std::shared_ptr<char[]> data, size_t data_size,
                      std::shared_ptr<std::pmr::synchronized_pool_resource> _memory_pool) {
         muse::serializer::BinarySerializer serializer;
+        //效率不高，唉.... 需要优化，需要一个无复制序列化器
         serializer.write(data.get(),data_size);
         std::string request_name;
         try {

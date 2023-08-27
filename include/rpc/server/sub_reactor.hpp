@@ -24,6 +24,8 @@
 #include "timer/timer_tree.hpp"
 #include "middleware_channel.hpp"
 #include "global_entry.hpp"
+#include "serializer/binaryDeserializeView.hpp"
+#include "rpc_response_header.hpp"
 
 namespace muse::rpc{
     //多长时间不发消息，就删除掉这个 socket 2 分钟
@@ -58,6 +60,8 @@ namespace muse::rpc{
         char sendBuf[Protocol::FullPieceSize + 1] = { '\0' };
 
         int epoll_switch_fd = -1;
+
+        muse::serializer::ByteSequence sq  { muse::serializer::getByteSequence()};
     private:
         /*
          * 处理新的链接

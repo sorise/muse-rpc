@@ -41,10 +41,7 @@ private:
     std::string name;
 };
 
-int test_fun1(int value){
-    int i  = 10;
-    return i + value;
-}
+
 
 std::vector<double> test_fun2(const std::vector<double>& scores){
     std::vector<double> tr = {
@@ -56,6 +53,23 @@ std::vector<double> test_fun2(const std::vector<double>& scores){
 int read_str(std::string message, const std::vector<double>& scores){
     return (int)message.size();
 }
+
+int test_fun1(int value){
+    int i  = 10;
+    return i + value;
+}
+
+// @context/test_ip_client
+int get_client_ip_port(int value, uint32_t client_ip_address, uint16_t client_port){
+    std::cout << client_ip_address <<":" << client_port << std::endl;
+    return 10 + value;
+}
+
+struct PeerContext{
+protected:
+    uint32_t client_ip_address;
+    uint16_t client_port;
+};
 
 int main() {
     //注册中间件
@@ -80,6 +94,7 @@ int main() {
     muse_bind_async("test_fun1", test_fun1);
     muse_bind_async("test_fun2", test_fun2);
     muse_bind_async("read_str", read_str);
+    muse_bind_async("@context/test_ip_client", get_client_ip_port);
 
     muse_bind_async("lambda test", [](int val)->int{
         printf("why call me \n");
@@ -87,39 +102,13 @@ int main() {
     });
 
     // 开一个线程启动反应堆,等待请求
-    Reactor reactor(15000, 2,2000, ReactorRuntimeThread::Asynchronous);
+    Reactor reactor(15000, 1,2000, ReactorRuntimeThread::Asynchronous);
 
     try {
         //开始运行
-        reactor.start(true);
+        reactor.start(false);
     }catch (const ReactorException &ex){
         SPDLOG_ERROR("Main-Reactor start failed!");
-    }
-
-    //等待发送器启动完毕
-    reactor.wait_transmitter();
-
-    for (int i = 0; i < 5; ++i) {
-        TransmitterEvent event("125.91.127.142", 15000);
-        event.call<int>("test_fun1", i);
-        event.set_callBack([](Outcome<int> t){
-            if (t.isOK()){
-                printf("OK lambda %d \n", t.value);
-            }else{
-                //调用失败
-                if (t.protocolReason == FailureReason::OK){
-                    //错误原因是RPC错误
-                    std::printf("rpc error\n");
-                    std::cout << t.response.getReason() << std::endl;
-                    //返回 int 值对应 枚举 RpcFailureReason
-                }else{
-                    //错误原因是网络通信过程中的错误
-                    std::printf("internet error\n");
-                    std::cout << (short)t.protocolReason << std::endl; //错误原因
-                }
-            }
-        });
-        reactor.send(std::move(event));
     }
 
     std::cin.get();

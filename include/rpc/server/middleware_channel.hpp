@@ -76,7 +76,6 @@ namespace muse::rpc{
         std::tuple<std::shared_ptr<char[]>, size_t , std::shared_ptr<std::pmr::synchronized_pool_resource>>
         ClientOut(std::shared_ptr<char[]> data, size_t data_size, std::shared_ptr<std::pmr::synchronized_pool_resource> _memory_pool);
 
-
     };
 }
 

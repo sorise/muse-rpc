@@ -127,81 +127,68 @@ void test_v(){
     transmitter.set_request_timeout(1500);
     transmitter.set_response_timeout(2000);
 
-    for (int i = 0; i < 5; ++i) {
-        TransmitterEvent event("127.0.0.1", 15000);
-        event.call<int>("test_fun1", i);
-        event.set_callBack([](Outcome<int> t){
-            if (t.isOK()){
-                printf("OK lambda %d \n", t.value);
+    TransmitterEvent event("127.0.0.1", 15000);
+    event.call<int>("@context/test_ip_client", 15);
+    event.set_callBack([](Outcome<int> t){
+        if (t.isOK()){
+            printf("OK lambda %d \n", t.value);
+        }else{
+            //调用失败
+            if (t.protocolReason == FailureReason::OK){
+                //错误原因是RPC错误
+                std::printf("rpc error\n");
+                std::cout << t.response.getReason() << std::endl;
+                //返回 int 值对应 枚举 RpcFailureReason
             }else{
-                //调用失败
-                if (t.protocolReason == FailureReason::OK){
-                    //错误原因是RPC错误
-                    std::printf("rpc error\n");
-                    std::cout << t.response.getReason() << std::endl;
-                    //返回 int 值对应 枚举 RpcFailureReason
-                }else{
-                    //错误原因是网络通信过程中的错误
-                    std::printf("internet error\n");
-                    std::cout << (short)t.protocolReason << std::endl; //错误原因
-                }
+                //错误原因是网络通信过程中的错误
+                std::printf("internet error\n");
+                std::cout << (short)t.protocolReason << std::endl; //错误原因
             }
-        });
-        transmitter.send(std::move(event));
-    }
-    std::this_thread::sleep_for(200ms);
-    //transmitter.stop();
-
-    for (int i = 0; i < 5; ++i) {
-        TransmitterEvent event("127.0.0.1", 15000);
-        event.call<int>("test_fun1", i);
-        event.set_callBack([](Outcome<int> t){
-            if (t.isOK()){
-                printf("OK lambda %d \n", t.value);
-            }else{
-                //调用失败
-                if (t.protocolReason == FailureReason::OK){
-                    //错误原因是RPC错误
-                    std::printf("rpc error\n");
-                    std::cout << t.response.getReason() << std::endl;
-                    //返回 int 值对应 枚举 RpcFailureReason
-                }else{
-                    //错误原因是网络通信过程中的错误
-                    std::printf("internet error\n");
-                    std::cout << (short)t.protocolReason << std::endl; //错误原因
-                }
-            }
-        });
-        transmitter.send(std::move(event));
-
-    }
-    std::this_thread::sleep_for(400ms);
-
-    for (int i = 0; i < 5; ++i) {
-        TransmitterEvent event("127.0.0.1", 15000);
-        event.call<std::vector<double>>("test_fun2", score);
-        event.set_callBack([](Outcome<std::vector<double>> t){
-            if (t.isOK()){
-                printf("OK lambda size: %zu \n", t.value.size());
-            }else{
-                //调用失败
-                if (t.protocolReason == FailureReason::OK){
-                    //错误原因是RPC错误
-                    std::printf("rpc error\n");
-                    std::cout << t.response.getReason() << std::endl;
-                    //返回 int 值对应 枚举 RpcFailureReason
-                }else{
-                    //错误原因是网络通信过程中的错误
-                    std::printf("internet error\n");
-                    std::cout << (short)t.protocolReason << std::endl; //错误原因
-                }
-            }
-        });
-        transmitter.send(std::move(event));
-
-    }
+        }
+    });
+    transmitter.send(std::move(event));
 
     std::cin.get();
+}
+
+void tes(){
+    std::string name{"@context/test_ip_client"};
+    BinarySerializer serializer;
+    serializer.inputArgs(name);
+    std::tuple<int> v(10);
+    serializer.input(v);
+
+    std::shared_ptr<char[]> dt( new char[125]);
+
+    std::memcpy(dt.get(),serializer.getBinaryStream(), serializer.byteCount());
+
+    uint32_t client_ip_address = 15;
+    uint16_t client_port = 15000;
+    muse::serializer::BinarySerializer serializer_;
+
+    serializer_.inputArgs(client_ip_address, client_port);
+
+    std::memcpy((char*)dt.get() + serializer.byteCount(), serializer_.getBinaryStream(), serializer_.byteCount());
+
+    std::string request_name;
+    serializer.output(request_name); //获得方法的名称
+    auto pos = serializer.getReadPosition() + sizeof(muse::serializer::BinaryDataType);
+    auto char_pos = (char*)dt.get() + pos;
+    muse::serializer::BinarySerializer::Tuple_Element_Length tpl_size = *reinterpret_cast<uint16_t *>(char_pos); //元祖长度
+
+    tpl_size += 2; // 把数组长度  + 2
+    //覆盖原来的数组长度
+    std::memcpy(char_pos, (char*)&tpl_size, sizeof(muse::serializer::BinarySerializer::Tuple_Element_Length));
+    serializer.clear();
+    serializer.write(dt.get(),125);
+
+    std::string name_;
+
+    std::tuple<int , uint32_t, uint16_t> tpl;
+    serializer.outputArgs(name_);
+    serializer.outputArgs(tpl);
+
+    std::cout << std::get<2>(tpl);
 }
 
 int main(int argc, char *argv[]){

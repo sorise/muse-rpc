@@ -12,9 +12,14 @@
 namespace muse::rpc{
     //路由服务，用于方法的定位
     class RouteService: public middleware_service{
+
     private:
+        std::string prefix_name {"@context/"};
+        ByteSequence sq  { muse::serializer::getByteSequence()};
         std::shared_ptr<SynchronousRegistry> concurrent_registry;
         std::shared_ptr<Registry> registry;
+
+
     public:
         RouteService(std::shared_ptr<Registry> _registry, std::shared_ptr<SynchronousRegistry> _concurrent_registry);
 

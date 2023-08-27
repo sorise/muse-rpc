@@ -1,6 +1,8 @@
 #include "rpc_response_header.hpp"
 
 namespace muse::rpc{
+    std::string RpcResponseHeader::prefix_name = {"@context/"};
+
     void RpcResponseHeader::setOkState(const bool& _ok){
         this->ok = _ok;
     }

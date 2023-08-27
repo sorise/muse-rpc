@@ -44,6 +44,7 @@ namespace muse::rpc{
         explicit Controller(std::function<void(BinarySerializer*)>&& f);
     };
 
+    /* 同步方法注册器 */
     class SynchronousRegistry {
     private:
         //方法存储中心，使用hash 列表 存储, 参数是 BinarySerializer
@@ -204,6 +205,7 @@ namespace muse::rpc{
 
         /* 执行这方法之前，请先调用 check 确认执行的方法已经存在 */
         void runEnsured(const std::string& name, BinarySerializer *serializer);
+
     };
 }
 #endif //MUSE_RPC_SYNCHRONOUS_REGISTRY_HPP

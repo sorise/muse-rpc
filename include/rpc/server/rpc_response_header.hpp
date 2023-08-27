@@ -15,6 +15,8 @@ namespace muse::rpc{
     };
 
     class RpcResponseHeader: public muse::serializer::IBinarySerializable{
+    public:
+        static std::string prefix_name;
     private:
             bool ok;
             int reason;

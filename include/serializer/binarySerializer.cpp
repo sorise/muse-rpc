@@ -49,10 +49,11 @@ namespace muse::serializer{
     };
     BinarySerializer::~BinarySerializer()  = default;
 
-    BinarySerializer::BinarySerializer(BinarySerializer &&other) noexcept
-    :byteStream(std::move(other.byteStream)),
-    readPosition(other.readPosition),
-    byteSequence(other.byteSequence){
+    BinarySerializer::BinarySerializer(BinarySerializer &&other) noexcept  {
+        byteStream = std::move(other.byteStream); //容器必须支持移动
+        readPosition = other.readPosition;
+        byteSequence = other.byteSequence;
+
         other.readPosition = 0;
     }
 
@@ -111,6 +112,13 @@ namespace muse::serializer{
         auto type = BinaryDataType::CHAR;
         write((char*)&type, sizeof(type)); //类型
         write((char*)&value, sizeof(char)); //值
+        return *this;
+    }
+
+    BinarySerializer &BinarySerializer::input(const unsigned char & value) {
+        auto type = BinaryDataType::UINT8;
+        write((char*)&type, sizeof(type)); //类型
+        write((char*)&value, sizeof(unsigned char)); //值
         return *this;
     }
 
@@ -249,6 +257,13 @@ namespace muse::serializer{
     BinarySerializer& BinarySerializer::output(char & value) {
         MUSE_CHECK_LEGITIMACY(CHAR,char)
         value = (char)byteStream[++readPosition];
+        ++readPosition;
+        return *this;
+    }
+
+    BinarySerializer& BinarySerializer::output(unsigned char & value) {
+        MUSE_CHECK_LEGITIMACY(UINT8,unsigned char)
+        value = (unsigned char)byteStream[++readPosition];
         ++readPosition;
         return *this;
     }

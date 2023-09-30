@@ -66,6 +66,7 @@ namespace muse::serializer{
         //反序列化
         BinaryDeserializeView& output(bool &);
         BinaryDeserializeView& output(char &);
+        BinaryDeserializeView& output(unsigned char &);
         BinaryDeserializeView& output(int16_t &);
         BinaryDeserializeView& output(int32_t &);
         BinaryDeserializeView& output(int64_t &);
@@ -125,6 +126,57 @@ namespace muse::serializer{
                     T v;
                     output(v);
                     value.emplace_back(v);
+                }
+            }catch(BinarySerializerException &serializerException) {
+                readPosition = defaultPosition;
+                throw serializerException;
+            }catch (std::exception &ex) {
+                readPosition = defaultPosition;
+                throw ex;
+            }catch (...){
+                readPosition = defaultPosition;
+                throw BinarySerializerException("not know error", ErrorNumber::ErrorReadingSubElements);
+            }
+            return *this;
+        }
+
+        template<typename T,  std::size_t N,typename = typename std::enable_if_t<std::is_default_constructible_v<T>>>
+        BinaryDeserializeView& output(std::array<T, N>& value)
+        {
+            //防止越界
+            MUSE_VIEW_PREVENT_BOUNDARY()
+            //类型检测
+            if (byteStream[readPosition] != (char)BinaryDataType::ARRAY)
+                throw BinarySerializerException("read type error", ErrorNumber::DataTypeError);
+
+            auto defaultPosition = readPosition;
+            //读取长度信息
+            readPosition++;
+            //获取 array 长度
+            auto leftSize =  byteStreamSize - readPosition;
+            if (leftSize < sizeof(uint32_t)){
+                readPosition = defaultPosition;
+                throw BinarySerializerException("remaining memory is not enough ", ErrorNumber::InsufficientRemainingMemory);
+            }
+            //读取字符串长度 大小端处理
+            auto arraySize = *((uint32_t *)(&byteStream[readPosition]));
+            if (byteSequence == ByteSequence::BigEndian)
+            {
+                char* first = (char*)&arraySize;
+                char* last = first + sizeof(uint32_t);
+                std::reverse(first, last);
+            }
+            //检测长度是否非法
+            if (arraySize > MUSE_MAX_ARRAY_COUNT){
+                readPosition = defaultPosition;
+                throw BinarySerializerException("illegal vector count" , ErrorNumber::IllegalVectorCount);
+            }
+            //检测剩余空间是否足够
+            readPosition += sizeof(uint32_t);
+            try {
+                for (unsigned int i =0; i < arraySize;i++)
+                {
+                    output(value[i]);
                 }
             }catch(BinarySerializerException &serializerException) {
                 readPosition = defaultPosition;

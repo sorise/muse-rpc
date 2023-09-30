@@ -12,10 +12,14 @@ include_directories(dependency)
 include_directories(dependency/catch2)
 include_directories(dependency/concurrent_queue)
 
-add_subdirectory(src)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED  ON)
+
+add_library(serializer SHARED
+        ${CMAKE_SOURCE_DIR}/include/serializer/binarySerializer.cpp
+        ${CMAKE_SOURCE_DIR}/include/serializer/util.cpp
+        ${CMAKE_SOURCE_DIR}/include/serializer/binaryDeserializeView.cpp
+)
 
 add_library(timer SHARED
         ${CMAKE_SOURCE_DIR}/include/timer/timer_wheel.cpp
@@ -80,7 +84,6 @@ add_executable(call bind.cpp)
 target_link_libraries(call
         PUBLIC z
 )
-
 target_link_libraries(muse
         PUBLIC rpc
 )

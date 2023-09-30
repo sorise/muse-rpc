@@ -20,6 +20,8 @@ namespace muse::serializer{
     #define MUSE_MAX_BYTE_COUNT 65536
     //Vector 长度 数量上限
     #define MUSE_MAX_VECTOR_COUNT 16777216
+    //Vector 长度 数量上限
+    #define MUSE_MAX_ARRAY_COUNT 16777216
     //List 长度 数量上限
     #define MUSE_MAX_LIST_COUNT 16777216
     //Map 健值对 数量上限
@@ -55,7 +57,9 @@ namespace muse::serializer{
         TUPLE,      //元组 - tuple
         HASHMAP,    //字典 - Hash map
         SET,        //集合 - Set
-        MUSECLASS   //用户自定义类型
+        MUSECLASS,  //用户自定义类型
+        ARRAY,      //array<_tp, _nm> 类型
+        UINT8,      //unsigned char
     };
 
     enum class ByteSequence: short
@@ -88,6 +92,8 @@ namespace muse::serializer{
         TheSetSizeExceedsTheLimit,          /* Set 成员数量超过 16777216   */
         IllegalSetCount,                    /* HashMap数量非法 */
         NoDataToStoreInFile,                /* 没有数据可以存储到文件中 */
+        TheArrayCountExceedsTheLimit,      /* Array长度超过 16777216   */
+        IllegalArrayCount,                 /* Array数量非法 */
     };
 
     /* 获取当前主机采用的字节序 */

@@ -86,6 +86,13 @@ namespace muse::serializer{
         return *this;
     }
 
+    BinaryDeserializeView& BinaryDeserializeView::output(unsigned char & value) {
+        MUSE_VIEW_CHECK_LEGITIMACY(UINT8,unsigned char)
+        value = (unsigned char)byteStream[++readPosition];
+        ++readPosition;
+        return *this;
+    }
+
     BinaryDeserializeView& BinaryDeserializeView::output(int16_t & value) {
         MUSE_VIEW_CHECK_LEGITIMACY(INT16,int16_t)
         value = *((int16_t *)(&byteStream[++readPosition]));

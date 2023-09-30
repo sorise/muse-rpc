@@ -16,6 +16,7 @@
 #include <string>
 #include <sstream>
 #include <cstdint>
+#include <array>
 
 static_assert(__cplusplus >= 201103L, "C++ version is not right" );
 
@@ -85,13 +86,13 @@ namespace muse::serializer{
         using Container_type = std::vector<char>;
         void clear();                            //清除所有
         void reset();                            //重新从开始读取
-        Container_type::size_type byteCount() const;                //多少字节数量
-        Position_Type getReadPosition() const;                      //获得当前指针所在位置
+        [[nodiscard]] Container_type::size_type byteCount() const;                //多少字节数量
+        [[nodiscard]] Position_Type getReadPosition() const;                      //获得当前指针所在位置
         bool checkDataTypeRightForward(BinaryDataType type);              //检查类型是否正确，如果正确，移动 readPosition
         BinarySerializer();                                         //默认构造函数
         BinarySerializer(const BinarySerializer& other) = delete;   //禁止复制
         BinarySerializer(BinarySerializer &&other) noexcept;        //支持移动操作
-        const char* getBinaryStream() const;                        //返回二进制流的指针
+        [[nodiscard]] const char* getBinaryStream() const;                        //返回二进制流的指针
 
         void saveToFile(const std::string& path) const;    //二进制数据存储到文件中
         void loadFromFile(const std::string& path);  //从文件中加载二进制数据
@@ -100,6 +101,7 @@ namespace muse::serializer{
 
         BinarySerializer& input(const bool&);
         BinarySerializer& input(const char &);
+        BinarySerializer& input(const unsigned char &);
         BinarySerializer& input(const int16_t &);
         BinarySerializer& input(const int32_t &);
         BinarySerializer& input(const int64_t &);
@@ -125,6 +127,26 @@ namespace muse::serializer{
             }
             //写入成员数量
             write((char*)&elementCount, sizeof(uint32_t));
+            //存储长度, 注意大小端问题
+            MUSE_TEMPLATE_CONVERT_TO_LITTLE_ENDIAN()
+            //写入成员
+            for (auto it = value.begin(); it != value.end(); it++)
+            {
+                input(*it);
+            }
+            return *this;
+        }
+
+        template<typename T,  std::size_t N,typename = typename std::enable_if_t<std::is_default_constructible_v<T>>>
+        BinarySerializer& input(const std::array<T,N>& value){
+            auto type = BinaryDataType::ARRAY;
+            //写入类型
+            write((char*)&type, sizeof(type));
+            //获得成员数量,不能超过某个限制
+            static_assert(N < MUSE_MAX_ARRAY_COUNT, "the array count exceeds the limit");
+            //写入成员数量
+            uint32_t tm = N;
+            write((char*)&tm, sizeof(uint32_t));
             //存储长度, 注意大小端问题
             MUSE_TEMPLATE_CONVERT_TO_LITTLE_ENDIAN()
             //写入成员
@@ -263,6 +285,7 @@ namespace muse::serializer{
         //反序列化
         BinarySerializer& output(bool &);
         BinarySerializer& output(char &);
+        BinarySerializer& output(unsigned char &);
         BinarySerializer& output(int16_t &);
         BinarySerializer& output(int32_t &);
         BinarySerializer& output(int64_t &);
@@ -322,6 +345,57 @@ namespace muse::serializer{
                     T v;
                     output(v);
                     value.emplace_back(v);
+                }
+            }catch(BinarySerializerException &serializerException) {
+                readPosition = defaultPosition;
+                throw serializerException;
+            }catch (std::exception &ex) {
+                readPosition = defaultPosition;
+                throw ex;
+            }catch (...){
+                readPosition = defaultPosition;
+                throw BinarySerializerException("not know error", ErrorNumber::ErrorReadingSubElements);
+            }
+            return *this;
+        }
+
+        template<typename T,  std::size_t N,typename = typename std::enable_if_t<std::is_default_constructible_v<T>>>
+        BinarySerializer& output(std::array<T, N>& value)
+        {
+            //防止越界
+            MUSE_PREVENT_BOUNDARY()
+            //类型检测
+            if (byteStream[readPosition] != (char)BinaryDataType::ARRAY)
+                throw BinarySerializerException("read type error", ErrorNumber::DataTypeError);
+
+            auto defaultPosition = readPosition;
+            //读取长度信息
+            readPosition++;
+            //获取 array 长度
+            auto leftSize =  byteStream.size() - readPosition;
+            if (leftSize < sizeof(uint32_t)){
+                readPosition = defaultPosition;
+                throw BinarySerializerException("remaining memory is not enough ", ErrorNumber::InsufficientRemainingMemory);
+            }
+            //读取字符串长度 大小端处理
+            auto arraySize = *((uint32_t *)(&byteStream[readPosition]));
+            if (byteSequence == ByteSequence::BigEndian)
+            {
+                char* first = (char*)&arraySize;
+                char* last = first + sizeof(uint32_t);
+                std::reverse(first, last);
+            }
+            //检测长度是否非法
+            if (arraySize > MUSE_MAX_ARRAY_COUNT){
+                readPosition = defaultPosition;
+                throw BinarySerializerException("illegal vector count" , ErrorNumber::IllegalVectorCount);
+            }
+            //检测剩余空间是否足够
+            readPosition += sizeof(uint32_t);
+            try {
+                for (unsigned int i =0; i < arraySize;i++)
+                {
+                    output(value[i]);
                 }
             }catch(BinarySerializerException &serializerException) {
                 readPosition = defaultPosition;

@@ -16,49 +16,49 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED  ON)
 
 add_library(serializer SHARED
-        ${CMAKE_SOURCE_DIR}/include/serializer/binarySerializer.cpp
-        ${CMAKE_SOURCE_DIR}/include/serializer/util.cpp
-        ${CMAKE_SOURCE_DIR}/include/serializer/binaryDeserializeView.cpp
+        include/serializer/binarySerializer.cpp
+        include/serializer/util.cpp
+        include/serializer/binaryDeserializeView.cpp
 )
 
 add_library(timer SHARED
-        ${CMAKE_SOURCE_DIR}/include/timer/timer_wheel.cpp
-        ${CMAKE_SOURCE_DIR}/include/timer/timer_tree.cpp
+        include/timer/timer_wheel.cpp
+        include/timer/timer_tree.cpp
 )
 
 add_library(museThreads SHARED
-        ${CMAKE_SOURCE_DIR}/include/thread_pool/executor.cpp
-        ${CMAKE_SOURCE_DIR}/include/thread_pool/conf.cpp
-        ${CMAKE_SOURCE_DIR}/include/thread_pool/pool.cpp
-        ${CMAKE_SOURCE_DIR}/include/thread_pool/concurrent_pool.cpp
+        include/thread_pool/executor.cpp
+        include/thread_pool/conf.cpp
+        include/thread_pool/pool.cpp
+        include/thread_pool/concurrent_pool.cpp
 )
 
 add_library(rpc SHARED
-        ${CMAKE_SOURCE_DIR}/include/rpc/protocol/protocol.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/reactor.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/request.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/sub_reactor.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/reactor_exception.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/reactor_pool.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/response.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/registry.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/rpc_response_header.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/middleware_channel.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/route_service.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/zlib_service.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/peer.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/synchronous_registry.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/global_entry.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/server/transmitter_link_reactor.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/client/response_data.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/client/invoker.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/client/client.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/client/invoker_exception.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/client/transmitter.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/client/outcome.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/client/transmitter_event.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/client/global_id.cpp
-        ${CMAKE_SOURCE_DIR}/include/rpc/memory/conf.cpp
+        include/rpc/protocol/protocol.cpp
+        include/rpc/server/reactor.cpp
+        include/rpc/server/request.cpp
+        include/rpc/server/sub_reactor.cpp
+        include/rpc/server/reactor_exception.cpp
+        include/rpc/server/reactor_pool.cpp
+        include/rpc/server/response.cpp
+        include/rpc/server/registry.cpp
+        include/rpc/server/rpc_response_header.cpp
+        include/rpc/server/middleware_channel.cpp
+        include/rpc/server/route_service.cpp
+        include/rpc/server/zlib_service.cpp
+        include/rpc/server/peer.cpp
+        include/rpc/server/synchronous_registry.cpp
+        include/rpc/server/global_entry.cpp
+        include/rpc/server/transmitter_link_reactor.cpp
+        include/rpc/client/response_data.cpp
+        include/rpc/client/invoker.cpp
+        include/rpc/client/client.cpp
+        include/rpc/client/invoker_exception.cpp
+        include/rpc/client/transmitter.cpp
+        include/rpc/client/outcome.cpp
+        include/rpc/client/transmitter_event.cpp
+        include/rpc/client/global_id.cpp
+        include/rpc/memory/conf.cpp
 )
 
 target_link_libraries(rpc

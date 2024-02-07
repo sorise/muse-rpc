@@ -85,7 +85,7 @@ int main() {
     //启动线程池
     GetThreadPoolSingleton();
     // 启动日志
-    InitSystemLogger();
+    muse::InitSystemLogger();
 
     //绑定方法的例子
     Normal normal(10, "remix");
@@ -102,8 +102,7 @@ int main() {
     });
 
     // 开一个线程启动反应堆,等待请求
-    Reactor reactor(15000, 1,2000, ReactorRuntimeThread::Asynchronous);
-
+    Reactor reactor(15000, 2,2000, ReactorRuntimeThread::Asynchronous);
     try {
         //开始运行
         reactor.start(false);

@@ -60,7 +60,7 @@ void test(){
             Singleton<Registry>(), Singleton<SynchronousRegistry>()
     ); //方法的路由
     // 125.91.127.142    // 127.0.0.1
-    Client remix("125.91.127.142 ", 15000, MemoryPoolSingleton());
+    Client remix("127.0.0.1", 15000, MemoryPoolSingleton());
 
     std::vector<double> scores = {
             84.01,98.1,15.2,98.2,15.89,84.01,98.1,15.2,98.2,15.89,84.01,98.1,15.2,98.2,15.89,

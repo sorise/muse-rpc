@@ -12,10 +12,13 @@
 #include <thread>
 #include <iostream>
 
-#define LOGGER_NAME "museLogger"
-#define MUSE_LOG spdlog::get("museLogger")
+#ifndef LOGGER_NAME
+    #define LOGGER_NAME "museLogger"
+    #define MUSE_LOG spdlog::get("museLogger")
+#endif
 
-namespace muse::rpc{
+
+namespace muse{
     static void InitSystemLogger(){
         //开启日志
         try

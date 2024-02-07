@@ -18,20 +18,15 @@ namespace muse::rpc{
     public:
         static std::string prefix_name;
     private:
-            bool ok;
-            int reason;
+        bool ok;
+        int reason;
     public:
         MUSE_IBinarySerializable(ok, reason);
-
         RpcResponseHeader();
         RpcResponseHeader(const RpcResponseHeader &other);
-
         void setOkState(const bool& _ok);
-
         bool getOkState() const;
-
         int getReason() const;
-
         void setReason(const RpcFailureReason& _reason);
     };
 }

@@ -1,5 +1,7 @@
 #ifndef MUSE_SERVER_SUB_REACTOR_HPP
 #define MUSE_SERVER_SUB_REACTOR_HPP
+
+#include "../logger/conf.hpp"
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -16,7 +18,6 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include "../protocol/protocol.hpp"
-#include "../logger/conf.hpp"
 #include "reqeust.hpp"
 #include "virtual_connection.hpp"
 #include "reactor_pool.hpp"

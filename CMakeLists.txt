@@ -10,10 +10,20 @@ project(muse-rpc
 include_directories(include)
 include_directories(dependency)
 include_directories(dependency/catch2)
+include_directories(dependency/spdlog-1.13.0/include)
 include_directories(dependency/concurrent_queue)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED  ON)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-Wall -fPIC)
+endif()
+
+#add thread only linux gcc
+set(CMAKE_CXX_FLAGS "${CAMKE_CXX_FLAGS} -std=c++17 -pthread")
+
+add_subdirectory(dependency/spdlog-1.13.0)
 
 add_library(serializer SHARED
         include/serializer/binarySerializer.cpp
@@ -62,7 +72,7 @@ add_library(rpc SHARED
 )
 
 target_link_libraries(rpc
-        PUBLIC serializer museThreads timer z
+        PUBLIC serializer museThreads timer z spdlog
 )
 
 #查找需要的库在不在
@@ -93,9 +103,6 @@ target_link_libraries(client
 target_link_libraries(call
         PUBLIC rpc
 )
-
-#add thread only linux gcc
-set(CMAKE_CXX_FLAGS "${CAMKE_CXX_FLAGS} -std=c++17 -pthread")
 
 # 启动单元测试
 enable_testing()

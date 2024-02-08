@@ -15,25 +15,29 @@
 #ifndef LOGGER_NAME
     #define LOGGER_NAME "museLogger"
     #define MUSE_LOG spdlog::get("museLogger")
+    #define MUSE_FILE_NAME "muse.log"
 #endif
 
 
 namespace muse{
-    static void InitSystemLogger(){
+    static void InitSystemLogger(const std::string& log_directory){
         //开启日志
         try
         {
             spdlog::init_thread_pool(8192, 1);
             //开两个线程取记录日志
             std::vector<spdlog::sink_ptr> sinks;
+
             //输出到文件，旋转日志
             auto rotating = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-                    "muse.log", 1024 * 1024 * 512, 3, false
+                    log_directory + MUSE_FILE_NAME, 1024 * 1024 * 512, 3, false
             );
+
             //输出到控制台
             auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
             sinks.push_back(rotating);
             sinks.push_back(consoleSink);
+
             //创造一个日志记录器
             auto logger =
                     std::make_shared<spdlog::async_logger>(
@@ -56,7 +60,6 @@ namespace muse{
             throw std::runtime_error("start failed because the Logger initialization failed in Reactor constructor");
         }
     }
-
 };
 
 #endif //MUSE_LOGGER_CONF_HPP

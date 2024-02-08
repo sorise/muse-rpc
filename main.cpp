@@ -72,28 +72,19 @@ protected:
 };
 
 int main() {
-    //注册中间件
-    MiddlewareChannel::configure<ZlibService>();  //解压缩
-    MiddlewareChannel::configure<RouteService>(Singleton<Registry>(), Singleton<SynchronousRegistry>()); //方法的路由
-
-    /* 设置线程池 */
-    ThreadPoolSetting::MinThreadCount = 4;
-    ThreadPoolSetting::MaxThreadCount = 4;
-    ThreadPoolSetting::TaskQueueLength = 4096;
-    ThreadPoolSetting::DynamicThreadVacantMillisecond = 3000ms;
-
-    //启动线程池
-    GetThreadPoolSingleton();
-    // 启动日志
-    muse::InitSystemLogger();
+    muse::rpc::MUSE_RPC::Configure(4,4,4096,3000ms,"/home/remix/log");
 
     //绑定方法的例子
     Normal normal(10, "remix");
 
     muse_bind_sync("normal", &Normal::addValue, &normal);
+
     muse_bind_async("test_fun1", test_fun1);
+
     muse_bind_async("test_fun2", test_fun2);
+
     muse_bind_async("read_str", read_str);
+
     muse_bind_async("@context/test_ip_client", get_client_ip_port);
 
     muse_bind_async("lambda test", [](int val)->int{
@@ -103,8 +94,9 @@ int main() {
 
     // 开一个线程启动反应堆,等待请求
     Reactor reactor(15000, 2,2000, ReactorRuntimeThread::Asynchronous);
+
+    //开始运行
     try {
-        //开始运行
         reactor.start(false);
     }catch (const ReactorException &ex){
         SPDLOG_ERROR("Main-Reactor start failed!");

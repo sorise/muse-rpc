@@ -1,5 +1,9 @@
 #ifndef MUSE_SERVER_RPC_HPP
 #define MUSE_SERVER_RPC_HPP
+
+#include <filesystem>
+#include <exception>
+
 #include "protocol/protocol.hpp"
 #include "logger/conf.hpp"
 #include "memory/conf.hpp"
@@ -32,6 +36,25 @@ namespace muse::rpc{
         static std::shared_ptr<T> instance = std::make_shared<T>();
         return instance;
     }
+
+    class MUSE_RPC{
+    public:
+          static void Configure();
+          /*
+           * @minThreadCount 线程池最小线程数
+           * @maxThreadCount 线程池中最大线程数
+           * @taskQueueLength 任务队列极限长度
+           * @dynamicThreadVacantMillisecond 空闲线程数量
+           * @logfile_directory 日志目录
+           * */
+          static void Configure(
+                  const size_t& minThreadCount,
+                  const size_t& maxThreadCount,
+                  const size_t& taskQueueLength,
+                  const std::chrono::milliseconds& dynamicThreadVacantMillisecond,
+                  const std::string& logfile_directory
+          );
+    };
 }
 
 #endif //MUSE_SERVER_RPC_HPP

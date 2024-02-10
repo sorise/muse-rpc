@@ -71,9 +71,9 @@ protected:
     uint16_t client_port;
 };
 
-int main() {
+int main(){
     muse::rpc::MUSE_RPC::Configure(4,4,4096,3000ms,"/home/remix/log");
-
+    
     //绑定方法的例子
     Normal normal(10, "remix");
 

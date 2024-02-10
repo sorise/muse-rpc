@@ -96,18 +96,17 @@ else ()
 endif ()
 
 add_executable(muse main.cpp)
-
 add_executable(client client.cpp)
 
 target_link_libraries(muse
     PUBLIC rpc
 )
+
 target_link_libraries(client
     PUBLIC rpc
 )
 
 # 启动单元测试
 enable_testing()
-
 # 进入单元测试
 add_subdirectory(tests)

@@ -37,7 +37,7 @@ namespace muse::rpc {
 
         struct sockaddr_in server_address{};
 
-        bool is_trigger {false };
+        bool is_trigger {false};
 
         TransmitterTask(TransmitterEvent && _event, const uint64_t& message_id);
     };

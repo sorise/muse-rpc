@@ -70,9 +70,9 @@ namespace muse::serializer{
         BinaryDeserializeView& output(int16_t &);
         BinaryDeserializeView& output(int32_t &);
         BinaryDeserializeView& output(int64_t &);
-        BinaryDeserializeView& output(u_int16_t &);
-        BinaryDeserializeView& output(u_int32_t &);
-        BinaryDeserializeView& output(u_int64_t &);
+        BinaryDeserializeView& output(uint16_t &);
+        BinaryDeserializeView& output(uint32_t &);
+        BinaryDeserializeView& output(uint64_t &);
         BinaryDeserializeView& output(float &);
         BinaryDeserializeView& output(double &);
         BinaryDeserializeView& output(std::string &);

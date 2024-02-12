@@ -31,15 +31,19 @@
     Singleton<SynchronousRegistry>()->Bind(__VA_ARGS__);
 
 namespace muse::rpc{
+
+
     template <class T>
     std::shared_ptr<T> Singleton() {
         static std::shared_ptr<T> instance = std::make_shared<T>();
         return instance;
     }
 
-    class MUSE_RPC{
+    class Disposition{
     public:
-          static void Configure();
+        static std::string Prefix;
+
+        static void Server_Configure();
           /*
            * @minThreadCount 线程池最小线程数
            * @maxThreadCount 线程池中最大线程数
@@ -47,14 +51,19 @@ namespace muse::rpc{
            * @dynamicThreadVacantMillisecond 空闲线程数量
            * @logfile_directory 日志目录
            * */
-          static void Configure(
+        static void Server_Configure(
                   const size_t& minThreadCount,
                   const size_t& maxThreadCount,
                   const size_t& taskQueueLength,
                   const std::chrono::milliseconds& dynamicThreadVacantMillisecond,
-                  const std::string& logfile_directory
-          );
+                  const std::string& logfile_directory,
+                  bool console_open_state  = true
+        );
+
+        static void Client_Configure();
     };
+
+
 }
 
 #endif //MUSE_SERVER_RPC_HPP

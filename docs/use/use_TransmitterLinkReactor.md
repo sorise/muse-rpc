@@ -10,7 +10,6 @@ Transmitter或者Client对象创建一个客户端然后调用远程方法,**但
 TransmitterLinkReactor对象，可以实现这个功能！
 
 **创建一个主动式Reactor** : 创建方法非常的简单，因为只需要传递一个 bool 值，`reactor.start(true)`。
-
 ```cpp
 /*
  * // 注册中间件

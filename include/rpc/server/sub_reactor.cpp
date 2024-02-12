@@ -199,7 +199,7 @@ namespace muse::rpc{
                                         it_response->second.lastActive = now;
                                         //数据已经准备好了，正在发送中
                                         if (header.type == ProtocolType::ReceiverACK){
-                                            SPDLOG_INFO("accept ACK {} from message id{}", header.acceptOrder, header.timePoint);
+                                            SPDLOG_INFO("accept ACK {} from message id {}", header.acceptOrder, header.timePoint);
                                             //发送数据
                                             it_response->second.setNewAckState(true);
                                             //收到了 ACK 确认
@@ -219,7 +219,7 @@ namespace muse::rpc{
                                         }
                                         else if (header.type == ProtocolType::TimedOutRequestHeartbeat){
                                             //收到了请求心跳信息，有数据了 直接发数据，而不是心跳
-                                            SPDLOG_INFO("accept TimedOutRequestHeartbeat from message id{}", header.acceptOrder, header.timePoint);
+                                            SPDLOG_INFO("accept TimedOutRequestHeartbeat from message id {}", header.acceptOrder, header.timePoint);
                                             if (it_response->second.getAckAccept() < it_response->second.getPieceCount()){
                                                 sendResponseDataToClient(vc, it_response->second.getID());
                                             }else{
@@ -597,14 +597,21 @@ namespace muse::rpc{
         auto pure_data_count = std::get<1>(data_tuple);
         muse::serializer::BinaryDeserializeView view(pure_data.get(), pure_data_count);
         std::string request_rpc_name;
+        //获得方法名称
         view.output(request_rpc_name);
-        auto router = MiddlewareChannel::GetInstance()->services.rbegin(); //获得 RouteService 实列
+        auto router = MiddlewareChannel::GetInstance()->services.rbegin();
+        //获得 RouteService 实列
         if (request_rpc_name.find(RpcResponseHeader::prefix_name) == 0){
             uint32_t client_ip_address = vc->addr.sin_addr.s_addr;
             uint16_t client_port = vc->addr.sin_port;
 
             muse::serializer::BinarySerializer serializer_ip_port;
-            serializer_ip_port.inputArgs(client_ip_address, client_port);
+            bool no_other_args = (pure_data_count == view.getReadPosition());
+            if (no_other_args){
+                serializer_ip_port.input(std::make_tuple(client_ip_address,client_port));
+            }else{
+                serializer_ip_port.inputArgs(client_ip_address, client_port);
+            }
             auto new_pure_data_count = pure_data_count + serializer_ip_port.byteCount();
 
             auto store = pool->allocate(new_pure_data_count);
@@ -613,29 +620,33 @@ namespace muse::rpc{
             });
             std::memcpy(store, pure_data.get(), pure_data_count);
             std::memcpy((char*)store + pure_data_count, serializer_ip_port.getBinaryStream(), serializer_ip_port.byteCount());
-            data_tuple = (*router)->In(dt, new_pure_data_count, pool);
+            //data_tuple = (*router)->In(dt, new_pure_data_count, pool);
 
-            auto pos = view.getReadPosition() + sizeof(muse::serializer::BinaryDataType);
-            auto char_pos = (char*)dt.get() + pos;
+            //有其他参数需要修改长度
+            if (!no_other_args){
+                auto pos = view.getReadPosition() + sizeof(muse::serializer::BinaryDataType);
+                auto char_pos = (char*)dt.get() + pos;
 
-            muse::serializer::BinarySerializer::Tuple_Element_Length tpl_size = *reinterpret_cast<uint16_t *>(char_pos); //元祖长度
-            //如果当前机器是大端序
-            // 小端序 ---> 大端序
-            if (sq == muse::serializer::ByteSequence::BigEndian){
-                auto first = (char*)&tpl_size;
-                auto last = first + sizeof(muse::serializer::BinarySerializer::Tuple_Element_Length);
-                std::reverse(first, last);
+                muse::serializer::BinarySerializer::Tuple_Element_Length
+                tpl_size = *reinterpret_cast<uint16_t *>(char_pos); //元祖长度
+                //如果当前机器是大端序
+                // 小端序 ---> 大端序
+                if (sq == muse::serializer::ByteSequence::BigEndian){
+                    auto first = (char*)&tpl_size;
+                    auto last = first + sizeof(muse::serializer::BinarySerializer::Tuple_Element_Length);
+                    std::reverse(first, last);
+                }
+                tpl_size += 2; // 把数组长度  + 2
+                //如果是大端序，数据插回去
+                // 大端序 ---> 小端序
+                if (sq == muse::serializer::ByteSequence::BigEndian){
+                    auto first = (char*)&tpl_size;
+                    auto last = first + sizeof(muse::serializer::BinarySerializer::Tuple_Element_Length);
+                    std::reverse(first, last);
+                }
+                //覆盖原来的数组长度
+                std::memcpy(char_pos, (char*)&tpl_size, sizeof(muse::serializer::BinarySerializer::Tuple_Element_Length));
             }
-            tpl_size += 2; // 把数组长度  + 2
-            //如果是大端序，数据插回去
-            // 大端序 ---> 小端序
-            if (sq == muse::serializer::ByteSequence::BigEndian){
-                auto first = (char*)&tpl_size;
-                auto last = first + sizeof(muse::serializer::BinarySerializer::Tuple_Element_Length);
-                std::reverse(first, last);
-            }
-            //覆盖原来的数组长度
-            std::memcpy(char_pos, (char*)&tpl_size, sizeof(muse::serializer::BinarySerializer::Tuple_Element_Length));
             data_tuple = (*router)->In(dt, new_pure_data_count, pool);
         }else{
             data_tuple = (*router)->In(pure_data, pure_data_count, pool);

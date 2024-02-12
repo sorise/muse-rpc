@@ -388,6 +388,5 @@ namespace muse::pool{
             //是否调用过 close 方法！
             if(!isTerminated.load(std::memory_order_acquire)) close();
         }
-        std::cout << "thread pool disappear!\n";
     }
 }

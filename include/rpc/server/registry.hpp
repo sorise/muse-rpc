@@ -42,7 +42,6 @@ namespace muse::rpc{
     public:
         Registry() = default;
     private:
-
         // 用tuple做参数调用函数模板类
         template<typename Function, typename Tuple, std::size_t... Index>
         decltype(auto) invoke_impl(Function&& func, Tuple&& t, std::index_sequence<Index...>)

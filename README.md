@@ -46,26 +46,22 @@ cd build
 
 ```c++
 int main() {
-    //绑定方法的例子
+    // 启动配置
+    // 4 设置 线程池最小线程数
+    // 4 设置 线程池最大线程数
+    // 4096 线程池任务缓存队列长度
+    // 3000ms; 动态线程空闲时间 3 秒
+    // 日志目录
+    // 是否将日志打印到控制台
+    muse::rpc::Disposition::Configure(4, 4, 4096, 3000ms, "/home/remix/log", true);
+        //绑定方法的例子
     Normal normal(10, "remix"); //用户自定义类
-    
-    // 方法注册
-    
     // 同步，意味着这个方法一次只能由一个线程执行，不能多个线程同时执行这个方法
     muse_bind_sync("normal", &Normal::addValue, &normal); //绑定成员函数
     muse_bind_async("test_fun1", test_fun1); // test_fun1、test_fun2 是函数指针
     muse_bind_async("test_fun2", test_fun2);
     
-    //注册中间件
-    //解压缩中间件
-    MiddlewareChannel::configure<ZlibService>();
-    //方法的路由，解析用户请求方法和方法参数 再注册表中寻找方法并调用
-    MiddlewareChannel::configure<RouteService>(Singleton<Registry>(), Singleton<SynchronousRegistry>());
-    
-    //启动线程池
-    GetThreadPoolSingleton();
-    // 启动日志
-    InitSystemLogger();
+
     // 开一个线程启动反应堆,等待请求
     // 绑定端口 15000， 启动两个从反应堆，每个反应堆最多维持 1500虚链接
     // ReactorRuntimeThread::Asynchronous 指定主反应堆新开一个线程运行，而不是阻塞当前线程
@@ -160,11 +156,8 @@ using namespace muse::timer;
 using namespace std::chrono_literals;
 
 int main{
-    //注册中间件
-    MiddlewareChannel::configure<ZlibService>();  //解压缩
-    MiddlewareChannel::configure<RouteService>(
-            Singleton<Registry>(), Singleton<SynchronousRegistry>()
-    ); //方法的路由
+    ////启动客户端配置
+    muse::rpc::Disposition::Client_Configure();
     //MemoryPoolSingleton 返回一个 std::shared_ptr<std::pmr::synchronized_pool_resource>
     //你可以自己定一个内存池
     
@@ -172,12 +165,12 @@ int main{
     Client client("127.0.0.1", 15000, MemoryPoolSingleton());
     
     //调用远程方法
-    outcome<std::vector<double>> result = remix.call<std::vector<double>>("test_fun2",scores);
+    Outcome<std::vector<double>> result = remix.call<std::vector<double>>("test_fun2",scores);
     
     std::cout << result.value.size() << std::endl;
     
     //调用 无参无返回值方法
-    outcome<void> result =remix.call<void>("normal");
+    Outcome<void> result =remix.call<void>("normal");
     if (result.isOK()){
         std::printf("success\n");
     }else{
@@ -245,11 +238,8 @@ enum class RpcFailureReason:int{
 * void MiddlewareChannel::set_response_timeout(const uint32_t& _timeout); 设置响应阶段的等待超时时间，默认值是900毫秒。
 ```cpp
 void test_v(){
-    //注册中间件
-    MiddlewareChannel::configure<ZlibService>();  //解压缩
-    MiddlewareChannel::configure<RouteService>(
-            Singleton<Registry>(), Singleton<SynchronousRegistry>()
-    ); //方法的路由
+    //启动客户端配置
+    muse::rpc::Disposition::Client_Configure();
 
     Transmitter transmitter(14500, GetThreadPoolSingleton());
     
@@ -340,5 +330,10 @@ SR2P协议会根据发生数据的多少决定每次发生几个数据报，下�
 
 其他情况的处理过程详细请查看 [Protocol.md](./docs/Protocol.md) 文档
 
-### [3. 致谢](#)
+### [3. 其他使用技巧](#)
+
+- [TransmitterLinkReactor](./docs/use/use_TransmitterLinkReactor.md) 为Reactor 附加一个主动发送RPC请求的能力，这个请求将会从服务端的端口发出。
+- [获取客户端请求IP地址和端口](./docs/use/use_IP_PORT.md) 
+
+### [4. 致谢](#)
 * 感谢 valgrind 工具在问题排查中的大力支持

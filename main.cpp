@@ -10,6 +10,8 @@
 #include <utility>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "serializer/binaryDeserializeView.hpp"
+#include "serializer/binarySerializer.h"
 
 #include "thread_pool/pool.hpp"
 
@@ -60,32 +62,23 @@ int test_fun1(int value){
 }
 
 // @context/test_ip_client
-int get_client_ip_port(int value, uint32_t client_ip_address, uint16_t client_port){
-    std::cout << client_ip_address <<":" << client_port << std::endl;
-    return 10 + value;
+int get_client_ip_port(int age, uint32_t client_ip_address, uint16_t client_port){
+    std::cout << "client >>" << client_ip_address <<":" << client_port << std::endl;
+    return 100 + age;
 }
 
-struct PeerContext{
-protected:
-    uint32_t client_ip_address;
-    uint16_t client_port;
-};
+// @context/test_ip_client_test
+int test_client_ip_port(uint32_t client_ip_address, uint16_t client_port){
+    std::cout << "client >>" << client_ip_address <<":" << client_port << std::endl;
+    return 100;
+}
+
 
 int main(){
-    muse::rpc::MUSE_RPC::Configure(4,4,4096,3000ms,"/home/remix/log");
-    
-    //绑定方法的例子
-    Normal normal(10, "remix");
+    muse::rpc::Disposition::Server_Configure(4, 4, 4096, 3000ms, "/home/remix/log");
 
-    muse_bind_sync("normal", &Normal::addValue, &normal);
-
-    muse_bind_async("test_fun1", test_fun1);
-
-    muse_bind_async("test_fun2", test_fun2);
-
-    muse_bind_async("read_str", read_str);
-
-    muse_bind_async("@context/test_ip_client", get_client_ip_port);
+    muse_bind_sync( Disposition::Prefix +"test_ip_client", get_client_ip_port);
+    muse_bind_sync( Disposition::Prefix + "test_ip_client_test", test_client_ip_port);
 
     muse_bind_async("lambda test", [](int val)->int{
         printf("why call me \n");

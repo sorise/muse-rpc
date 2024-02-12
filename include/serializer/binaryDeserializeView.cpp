@@ -44,7 +44,7 @@ namespace muse::serializer{
         byteStream = other.byteStream;
         readPosition = other.readPosition;
         byteSequence = other.byteSequence;
-
+        byteStreamSize = other.byteStreamSize;
         other.byteStream = nullptr;
         other.readPosition = 0;
     }
@@ -117,27 +117,27 @@ namespace muse::serializer{
         return *this;
     }
 
-    BinaryDeserializeView& BinaryDeserializeView::output(u_int16_t & value) {
-        MUSE_VIEW_CHECK_LEGITIMACY(UINT16,u_int16_t)
-        value = *((u_int16_t *)(&byteStream[++readPosition]));
+    BinaryDeserializeView& BinaryDeserializeView::output(uint16_t & value) {
+        MUSE_VIEW_CHECK_LEGITIMACY(UINT16,uint16_t)
+        value = *((uint16_t *)(&byteStream[++readPosition]));
         //如果主机是大端序 将其转换为大端序列
-        MUSE_VIEW_CONVERT_TO_BIG_ENDIAN(u_int16_t)
+        MUSE_VIEW_CONVERT_TO_BIG_ENDIAN(uint16_t)
         return *this;
     }
 
-    BinaryDeserializeView& BinaryDeserializeView::output(u_int32_t & value) {
-        MUSE_VIEW_CHECK_LEGITIMACY(UINT32,u_int32_t)
-        value = *((u_int32_t *)(&byteStream[++readPosition]));
+    BinaryDeserializeView& BinaryDeserializeView::output(uint32_t & value) {
+        MUSE_VIEW_CHECK_LEGITIMACY(UINT32,uint32_t)
+        value = *((uint32_t *)(&byteStream[++readPosition]));
         //如果主机是大端序 将其转换为大端序列
-        MUSE_VIEW_CONVERT_TO_BIG_ENDIAN(u_int32_t)
+        MUSE_VIEW_CONVERT_TO_BIG_ENDIAN(uint32_t)
         return *this;
     }
 
-    BinaryDeserializeView& BinaryDeserializeView::output(u_int64_t & value) {
-        MUSE_VIEW_CHECK_LEGITIMACY(UINT64,u_int64_t)
-        value = *((u_int64_t *)(&byteStream[++readPosition]));
+    BinaryDeserializeView& BinaryDeserializeView::output(uint64_t & value) {
+        MUSE_VIEW_CHECK_LEGITIMACY(UINT64,uint64_t)
+        value = *((uint64_t *)(&byteStream[++readPosition]));
         //如果主机是大端序 将其转换为大端序列
-        MUSE_VIEW_CONVERT_TO_BIG_ENDIAN(u_int64_t)
+        MUSE_VIEW_CONVERT_TO_BIG_ENDIAN(uint64_t)
         return *this;
     }
 

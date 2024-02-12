@@ -20,7 +20,7 @@
 
 
 namespace muse{
-    static void InitSystemLogger(const std::string& log_directory){
+    static void InitSystemLogger(const std::string& log_directory, bool console_open_state  = true){
         //开启日志
         try
         {
@@ -36,8 +36,9 @@ namespace muse{
             //输出到控制台
             auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
             sinks.push_back(rotating);
-            sinks.push_back(consoleSink);
-
+            if (console_open_state){
+                sinks.push_back(consoleSink);
+            }
             //创造一个日志记录器
             auto logger =
                     std::make_shared<spdlog::async_logger>(

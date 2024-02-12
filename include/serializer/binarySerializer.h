@@ -40,6 +40,7 @@ namespace muse::serializer{
         using Position_Type = long;
         using Element_Length = uint32_t ;
         using Tuple_Element_Length = uint16_t ;
+        using Store_Element_Type = std::vector<char>;
     private:
         template<unsigned int N>
         struct TupleWriter {
@@ -61,7 +62,7 @@ namespace muse::serializer{
         };
 
         /* 存储字节流数据 */
-        std::vector<char> byteStream;
+        Store_Element_Type byteStream;
         /* 读取指针 */
         Position_Type readPosition;
         /* 字节序 */
@@ -289,9 +290,9 @@ namespace muse::serializer{
         BinarySerializer& output(int16_t &);
         BinarySerializer& output(int32_t &);
         BinarySerializer& output(int64_t &);
-        BinarySerializer& output(u_int16_t &);
-        BinarySerializer& output(u_int32_t &);
-        BinarySerializer& output(u_int64_t &);
+        BinarySerializer& output(uint16_t &);
+        BinarySerializer& output(uint32_t &);
+        BinarySerializer& output(uint64_t &);
         BinarySerializer& output(float &);
         BinarySerializer& output(double &);
         BinarySerializer& output(std::string &);

@@ -24,11 +24,11 @@
 
 //异步方法，也就是当前方法可以同时被多个线程同时执行
 #define muse_bind_async(...) \
-    Singleton<Registry>()->Bind(__VA_ARGS__);
+    muse::rpc::Singleton<Registry>()->Bind(__VA_ARGS__);
 
 //同步方法，一次只能一个线程执行此方法
 #define muse_bind_sync(...) \
-    Singleton<SynchronousRegistry>()->Bind(__VA_ARGS__);
+    muse::rpc::Singleton<SynchronousRegistry>()->Bind(__VA_ARGS__);
 
 namespace muse::rpc{
 

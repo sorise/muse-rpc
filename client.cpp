@@ -15,7 +15,7 @@ void test_v(){
     muse::rpc::Disposition::Client_Configure();
 
     //方法的路由
-    Client remix("127.0.0.1", 15000, MemoryPoolSingleton());
+    Client remix("110.41.82.121", 15000, MemoryPoolSingleton());
     //调用远程方法
     Outcome<int> result = remix.call<int>("@context/test_ip_client_test");
 

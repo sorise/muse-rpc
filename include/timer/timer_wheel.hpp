@@ -13,8 +13,6 @@
 #include <thread>
 #include <array>
 #include <atomic>
-#include "thread_pool/pool.hpp"
-#include "thread_pool/executor.h"
 
 namespace muse::timer{
     using namespace std::chrono_literals;
@@ -51,8 +49,6 @@ namespace muse::timer{
         static const uint16_t levelCount = 5;
         //获得当前的时间，采取  system_clock
         static std::chrono::milliseconds GetTick();
-        //线程池
-        std::shared_ptr<muse::pool::ThreadPool> pool {nullptr};
     private:
         struct Bucket{
             //放在每个桶里面
@@ -93,19 +89,13 @@ namespace muse::timer{
         void setTimerWheelTask(std::chrono::milliseconds delay, std::shared_ptr<TimerWheelTask>& task);
     public:
         TimerWheel();
-
         ~TimerWheel();
 
         //禁止拷贝 赋值拷贝 移动 移动赋值
         TimerWheel(const TimerWheel& other) = delete;
-
         TimerWheel(TimerWheel&& other) = delete;
-
         TimerWheel& operator=(const TimerWheel&other) = delete;
-
         TimerWheel& operator=(TimerWheel&&) = delete;
-
-        auto inject_thread_pool(std::shared_ptr<muse::pool::ThreadPool> _pool) ->void;
 
         template<typename F, typename ...Args >
         std::shared_ptr<TimerWheelTask> setTimeout(const std::chrono::milliseconds& delay, F && f, Args&&... args){

@@ -249,15 +249,7 @@ namespace muse::timer{
                         //遍历任务
                         while (start != levelOne[levelOneIndex].tasks.end()){
                             if (!(*start)->getCancelState()){
-                                if (this->pool != nullptr){
-                                    auto ex = muse::pool::make_executor((*start)->callBack);
-                                    auto commit = pool->commit_executor(ex); //有可能会触发失败，因为任务队列已经满了
-                                    if (!commit.isSuccess){
-                                        (*start)->callBack();
-                                    }
-                                }else{
-                                    (*start)->callBack();
-                                }
+                                (*start)->callBack();
                                 //需要重复执行 需要防止死锁，好像这里需要递归加锁
                                 if ((*start)->isDuplicate){
                                     //如果是重复执行
@@ -297,9 +289,5 @@ namespace muse::timer{
     void TimerWheel::clearInterval(std::shared_ptr<muse::timer::TimerWheelTask>& task ){
         task->cancel();
         task->isDuplicate = false;
-    }
-
-    auto TimerWheel::inject_thread_pool(std::shared_ptr<muse::pool::ThreadPool> _pool) -> void {
-        this->pool = _pool;
     }
 }

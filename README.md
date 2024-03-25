@@ -162,7 +162,7 @@ int main{
     //你可以自己定一个内存池
     
     //传入 服务器地址和服务端端口号、一个C++ 17 标准内存池
-    Client client("127.0.0.1", 15000, MemoryPoolSingleton());
+    Client remix("127.0.0.1", 15000, MemoryPoolSingleton());
     
     //调用远程方法
     Outcome<std::vector<double>> result = remix.call<std::vector<double>>("test_fun2",scores);
@@ -241,7 +241,7 @@ void test_v(){
     //启动客户端配置
     muse::rpc::Disposition::Client_Configure();
 
-    Transmitter transmitter(14500, GetThreadPoolSingleton());
+    Transmitter transmitter(14500);
     
     //transmitter.set_request_timeout(1500); //设置请求阶段的等待超时时间
     //transmitter.set_response_timeout(2000); //设置响应阶段的等待超时时间

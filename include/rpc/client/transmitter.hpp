@@ -63,11 +63,9 @@ namespace muse::rpc {
          @_worker_count 工作线程数量
          @_queue_size 线程池任务队列数
          */
-        explicit Transmitter(const uint16_t & _port, const std::shared_ptr<ThreadPool>& _workers = nullptr);
+        explicit Transmitter(const uint16_t& _port, size_t coreThreadsCount = 2, size_t _maxThreadCount = 3, size_t _queueMaxSize = 4096, ThreadPoolType _type = ThreadPoolType::Flexible,  ThreadPoolCloseStrategy poolCloseStrategy = muse::pool::ThreadPoolCloseStrategy::WaitAllTaskFinish, std::chrono::milliseconds unit = 1500ms);
 
-        /* flag 参数没有任何意义，仅仅是为了和另一个构造函数区分开，防止误用 */
-        Transmitter(bool flag , int socket_fd, const std::shared_ptr<ThreadPool>& _workers = nullptr);
-
+        Transmitter(bool flag ,int _socket_fd, const std::shared_ptr<ThreadPool> &_workers);
 
         bool send(TransmitterEvent &&event);
 
@@ -103,7 +101,7 @@ namespace muse::rpc {
         void response_timeout_event(uint64_t message_id, std::chrono::milliseconds last_active);
 
         /* 触发回调事件 */
-        void trigger(uint64_t message_id);
+        void trigger(std::shared_ptr<TransmitterTask> msg);
 
         void send_request_heart_beat(const std::shared_ptr<TransmitterTask>& task, CommunicationPhase phase);
 

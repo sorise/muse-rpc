@@ -88,7 +88,7 @@ namespace muse::rpc{
                     auto cv = (VirtualConnection *)epollQueue[i].data.ptr;
                     closeSocket(cv);
                     SPDLOG_ERROR("epoll event EPOLLERR errno: {} {} {}", errno, cv->socket_fd, (uint32_t)epollQueue[i].events);
-                    throw std::runtime_error("exit"); //停掉服务直接退出
+                    //throw std::runtime_error("exit"); //停掉服务直接退出
                 }
                 if (epollQueue[i].events & EPOLLIN){
                     //收到新链接

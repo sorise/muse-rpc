@@ -18,14 +18,13 @@ namespace muse::timer{
     }
 
 
-    TimeNode::TimeNode(uint64_t Id,CallBack cb, time_t exp)
-    :TimeNodeBase(Id, exp),callBack(std::move(cb)){
+    TimeNode::TimeNode(uint64_t Id, CallBack cb, time_t exp)
+    :TimeNodeBase(Id, exp), callBack(std::move(cb)){
 
     }
 
-    uint64_t TimerTree::initID = 0;
-
     uint64_t TimerTree::GenTimeTaskID(){
+        std::unique_lock<std::mutex> lock(mtx);
         return  ++initID;
     }
 
@@ -55,6 +54,7 @@ namespace muse::timer{
 
     bool TimerTree::runTask(){
         if (!nodes.empty()){
+            //迭代器，但是加锁了
             auto it = nodes.begin();
             time_t diff = it->getExpire() - TimerTree::GetTick();
             if (diff <= 0){

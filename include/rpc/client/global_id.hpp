@@ -15,7 +15,7 @@ namespace muse::rpc{
     std::chrono::microseconds GetNowTickSeconds();
 
     /* 纳秒 ID message id */
-    uint64_t GlobalMicrosecondsId();
+    uint64_t GlobalTransmitterId();
 
     /* 用于 */
     uint64_t GlobalSecondsId();

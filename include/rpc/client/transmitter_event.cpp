@@ -41,7 +41,7 @@ namespace muse::rpc{
         return this->port;
     }
 
-    void TransmitterEvent::trigger_callBack(ResponseData responseData) {
+    void TransmitterEvent::trigger_callBack(ResponseData* responseData) {
         this->callBack(responseData);
     }
 

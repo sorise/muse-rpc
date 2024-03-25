@@ -45,7 +45,7 @@ namespace muse::rpc{
         // 启动日志
         muse::InitSystemLogger(logfile_directory, console_open_state);
     }
-
+    /* 并未设置线程池 */
     void Disposition::Client_Configure() {
         MiddlewareChannel::configure<ZlibService>();  //解压缩
         MiddlewareChannel::configure<RouteService>(Singleton<Registry>(), Singleton<SynchronousRegistry>()); //方法的路由

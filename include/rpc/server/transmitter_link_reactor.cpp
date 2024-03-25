@@ -246,16 +246,16 @@ namespace muse::rpc{
                     GlobalEntry::active_queue->erase(_servlet);
                 }, servlet);
 
-                auto ex = make_executor(&TransmitterLinkReactor::trigger, this, msg->message_id);
+                auto ex = make_executor(&TransmitterLinkReactor::trigger, this, msg);
                 auto result = workers->commit_executor(ex);
                 if (!result.isSuccess){
                     //如果提交失败咋办？
                     SPDLOG_ERROR("Transmitter::trigger commit to thread pool error!", msg->message_id);
                     //开线程
-                    auto fu = std::async(std::launch::async,&TransmitterLinkReactor::trigger, this, msg->message_id);
+                    auto fu = std::async(std::launch::async,&TransmitterLinkReactor::trigger, this, msg);
                 }
             }else{
-                trigger(msg->message_id);
+                trigger(msg);
             }
         }
     }

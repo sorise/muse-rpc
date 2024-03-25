@@ -111,7 +111,7 @@ namespace muse::rpc{
                 serializer->input(result);
             }MUSE_C_REGISTRY_METHOD_CATCH()
         }
-//
+
         /* 成员函数无返回值 */
         template<typename R, typename C, typename ...Params>
         typename std::enable_if<std::is_same<R, void>::value, void>::type

@@ -66,6 +66,7 @@ namespace muse::rpc{
         uint32_t total_size = data_size;
         uint16_t piece_count =  data_size/Protocol::defaultPieceLimitSize + (((total_size % Protocol::defaultPieceLimitSize) == 0)?0:1);
         uint16_t last_piece_size = (total_size % Protocol::defaultPieceLimitSize == 0)? Protocol::defaultPieceLimitSize:total_size % Protocol::defaultPieceLimitSize ; /* 数据部分 */
+        //毫秒ID 跨线程很危险
         auto message_id = muse::timer::TimerWheel::GetTick().count();
 
         char buffer[Protocol::FullPieceSize + 1];         // 缓存区

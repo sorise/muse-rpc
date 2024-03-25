@@ -17,18 +17,20 @@ namespace muse::rpc {
         server_address.sin_port = htons(event.get_port());
     }
 
-    Transmitter::Transmitter(const uint16_t& _port, const std::shared_ptr<ThreadPool>& _workers):
-    workers(_workers),
+    Transmitter::Transmitter(const uint16_t& _port, size_t coreThreadsCount, size_t _maxThreadCount, size_t _queueMaxSize, ThreadPoolType _type,  ThreadPoolCloseStrategy poolCloseStrategy, std::chrono::milliseconds unit):
     port(_port)
     {
+        workers = std::make_shared<muse::pool::ThreadPool>(coreThreadsCount, _maxThreadCount, _queueMaxSize, _type, poolCloseStrategy, unit);
         this->socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
+
         if(this->socket_fd == -1){
             throw std::runtime_error("socket create failed");
         }
+
         sockaddr_in localAddress{
                 PF_INET,
                 htons(_port),
-                htonl(INADDR_ANY)
+                {htonl(INADDR_ANY)}
         };
 
         if(::bind(this->socket_fd, (const struct sockaddr *)&localAddress, sizeof(localAddress)) == -1){
@@ -41,6 +43,7 @@ namespace muse::rpc {
     }
 
     Transmitter::~Transmitter() {
+        workers->close();
         run_state.store(false, std::memory_order_relaxed);
         condition.notify_one();
         //等待线程死掉
@@ -48,6 +51,12 @@ namespace muse::rpc {
             if (runner->joinable()) runner->join();
             //SPDLOG_INFO("Runner die!");
         }
+    }
+
+    Transmitter::Transmitter(bool flag ,int _socket_fd, const std::shared_ptr<ThreadPool> &_workers)
+            :socket_fd(_socket_fd),workers(_workers){
+        if(_socket_fd <= 0) throw ClientException("socket fd not right", ClientError::SocketFDError);;
+        pool = MemoryPoolSingleton();
     }
 
     //开启迭代器
@@ -68,7 +77,6 @@ namespace muse::rpc {
                     for (auto &it: new_messages) {
                         if (messages.count(it.first) == 0){
                             messages[it.first] = it.second;
-                            SPDLOG_INFO("Transmitter add message {} ", it.second->message_id);
                         }
                     }
                     //清楚所有的信息
@@ -209,7 +217,7 @@ namespace muse::rpc {
         //判断是否是多次发送同一个 event
         if (event.get_callBack_state() && event.get_remote_state()){
             //创建一个任务
-            std::shared_ptr<TransmitterTask> taskPtr = std::make_shared<TransmitterTask>(std::move(event), GlobalMicrosecondsId());
+            std::shared_ptr<TransmitterTask> taskPtr = std::make_shared<TransmitterTask>(std::move(event), GlobalTransmitterId());
             // 设置数据
             std::shared_ptr<char[]> data_share(const_cast<char*>(taskPtr->event.get_serializer().getBinaryStream()), [](char *ptr){});
             // 中间件通道处理
@@ -285,21 +293,21 @@ namespace muse::rpc {
         );
     }
 
-    void Transmitter::trigger(uint64_t message_id){
-        auto it = messages.find(message_id);
-        if (it != messages.end()){
+    void Transmitter::trigger(std::shared_ptr<TransmitterTask> msg){
+        //由于是异步的 迭代器有可能失效
+        if (msg != nullptr){
             //执行回调函数
-            if (it->second->response_data.isSuccess){
+            if (msg->response_data.isSuccess){
                 //正确获得了所有的数据
-                auto realTpl = MiddlewareChannel::GetInstance()->ClientIn(it->second->response_data.data, it->second->response_data.total_size, pool);
-                it->second->response_data.data = std::get<0>(realTpl);
-                it->second->response_data.total_size = std::get<1>(realTpl);
+                auto realTpl = MiddlewareChannel::GetInstance()->ClientIn(msg->response_data.data, msg->response_data.total_size, pool);
+                msg->response_data.data = std::get<0>(realTpl);
+                msg->response_data.total_size = std::get<1>(realTpl);
             }
-            it->second->event.trigger_callBack(it->second->response_data);
+            msg->event.trigger_callBack(&(msg->response_data));
             //设置一个定时器，然后删除当前消息
             {
                 std::lock_guard<std::mutex> lock(timer_mtx);
-                timer.setTimeout(0, &Transmitter::delete_message, this, message_id);
+                timer.setTimeout(0, &Transmitter::delete_message, this, msg->message_id);
             }
         }
     }
@@ -308,16 +316,14 @@ namespace muse::rpc {
         if (!msg->is_trigger){
             msg->is_trigger = true;
             if(workers != nullptr){
-                auto ex = make_executor(&Transmitter::trigger, this, msg->message_id);
+                auto ex = make_executor(&Transmitter::trigger, this, msg);
                 auto result = workers->commit_executor(ex);
                 if (!result.isSuccess){
-                    //如果提交失败咋办？
-                    SPDLOG_ERROR("Transmitter::trigger commit to thread pool error!", msg->message_id);
                     //开线程
-                    auto fu = std::async(std::launch::async,&Transmitter::trigger, this, msg->message_id);
+                    auto fu = std::async(std::launch::async,&Transmitter::trigger, this, msg);
                 }
             }else{
-                trigger(msg->message_id);
+                trigger(msg);
             }
         }
     }
@@ -372,7 +378,6 @@ namespace muse::rpc {
 
     void Transmitter::delete_message(uint64_t message_id) {
         if (messages.count(message_id)){
-            //SPDLOG_INFO("Transmitter delete message {} !", message_id);
             messages.erase(message_id);
         }
     }
@@ -455,11 +460,5 @@ namespace muse::rpc {
     void Transmitter::stop_immediately() noexcept {
         run_state.store(false, std::memory_order_relaxed);
         condition.notify_one();
-    }
-
-    Transmitter::Transmitter(bool flag ,int _socket_fd, const std::shared_ptr<ThreadPool> &_workers)
-    :socket_fd(_socket_fd),workers(_workers){
-        if(_socket_fd <= 0) throw ClientException("socket fd not right", ClientError::SocketFDError);;
-        pool = MemoryPoolSingleton();
     }
 } // muse::rpc

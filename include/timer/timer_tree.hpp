@@ -9,8 +9,10 @@
 #include <limits>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <set>
 #include <utility>
+#include "spdlog/spdlog.h"
 
 /* 基于红黑树的非线程安全的毫秒级定时器 */
 namespace muse::timer{
@@ -42,19 +44,20 @@ namespace muse::timer{
 
     class TimerTree {
     private:
-        static uint64_t initID;
+        std::mutex mtx;
+        uint64_t initID {0};
         /* 存放执行节点 */
         std::set<TimeNode, std::less<>> nodes;
         /* 获得当前时间 */
         static time_t GetTick();
         /* 获得时间唯一ID */
-        static uint64_t GenTimeTaskID();
+        uint64_t GenTimeTaskID();
     public:
         TimerTree() = default;
 
         //添加到树上  
         template<class F, class ...Args >
-        TimeNodeBase setTimeout(long long milliseconds, F && f, Args&&... args){
+        TimeNodeBase setTimeout(long long milliseconds, F && f, Args&... args){
             TimeNode::CallBack callBack = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
             TimeNode tNode(GenTimeTaskID() ,callBack, GetTick() + milliseconds);
             nodes.insert(tNode);
@@ -62,7 +65,7 @@ namespace muse::timer{
         }
 
         //添加到树上普通 函数指针  + 引用
-        template<typename F,typename R,  typename ...Args>
+        template<typename F,typename R, typename ...Args>
         TimeNodeBase setTimeout(long long milliseconds, F&& f, R& r,  Args&&... args){
             TimeNode::CallBack callBack = std::bind(std::forward<F>(f) , std::ref(r) ,std::forward<Args>(args)...);
             TimeNode tNode(GenTimeTaskID() ,callBack, GetTick() + milliseconds);
@@ -71,7 +74,7 @@ namespace muse::timer{
         }
 
         //添加到树上 函数指针 + 指针
-        template<typename F,typename R,  typename ...Args>
+        template<typename F, typename R, typename ...Args>
         TimeNodeBase setTimeout(long long milliseconds, F&& f, R* r,  Args&&... args){
             TimeNode::CallBack callBack = std::bind(std::forward<F>(f), r ,std::forward<Args>(args)...);
             TimeNode tNode(GenTimeTaskID() ,callBack, GetTick() + milliseconds);
@@ -87,7 +90,6 @@ namespace muse::timer{
 
         /* 执行任务 */
         bool runTask();
-
     };
 }
 

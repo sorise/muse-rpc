@@ -1,9 +1,9 @@
-cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
 project(muse-rpc
         VERSION         0.0.1
         DESCRIPTION     "A Simple RPC Application Framework Based on Connection UDP"
-        HOMEPAGE_URL    "https://github.com/muse"
+        HOMEPAGE_URL    "https://github.com/sorise/muse-rpc"
         LANGUAGES       C CXX
 )
 
@@ -16,27 +16,24 @@ include_directories(dependency/concurrent_queue)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED  ON)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        add_compile_options(-Wall -fPIC)
-endif()
-
-#add thread only linux gcc
-set(CMAKE_CXX_FLAGS "${CAMKE_CXX_FLAGS} -std=c++17 -pthread")
-
-#解决 visual studio 编码问题,暂时不支持 windows
-if (WIN32)
-    add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
-    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-endif ()
-
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     SET(ZLIB_LIBRARY_PATH  "/usr/local/lib")
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    #add thread only linux gcc
+    set(CMAKE_CXX_FLAGS "${CAMKE_CXX_FLAGS} -std=c++17 -pthread")
 
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        add_compile_options(-Wall -fPIC)
+    endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    #解决 visual studio 编码问题,暂时不支持 windows
+    if (WIN32)
+        add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
+        add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+    endif ()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
 
 else()
-
+    MESSAGE(FATAL_ERROR "Not Support The OS!")
 endif()
 
 add_subdirectory(dependency/spdlog-1.13.0)

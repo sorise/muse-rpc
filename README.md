@@ -41,9 +41,7 @@ cd build
 ### 1. 基本使用方法
 
 #### 1.1 服务端配置启动
-
 基本配置内容如下所示
-
 ```c++
 int main() {
     // 启动配置
@@ -53,7 +51,7 @@ int main() {
     // 3000ms; 动态线程空闲时间 3 秒
     // 日志目录
     // 是否将日志打印到控制台
-    muse::rpc::Disposition::Configure(4, 4, 4096, 3000ms, "/home/remix/log", true);
+    muse::rpc::Disposition::Server_Configure(4, 4, 4096, 3000ms, "/home/remix/log", true);
         //绑定方法的例子
     Normal normal(10, "remix"); //用户自定义类
     // 同步，意味着这个方法一次只能由一个线程执行，不能多个线程同时执行这个方法
@@ -73,11 +71,9 @@ int main() {
     }catch (const ReactorException &ex){
         SPDLOG_ERROR("Main-Reactor start failed!");
     }
-    
     /*
      * 当前线程的其他任务
      * */
-    
     //程序结束
     spdlog::default_logger()->flush(); //刷新日志
 }
@@ -87,11 +83,8 @@ int main() {
 
 <img src="./docs/assets/run.png" width="1000px" />
 
-
-
 #### 1.2 Server 注册方法
 使用宏 **muse_bind_sync** 和 **muse_bind_async**。前者是调用 SynchronousRegistry  后者是调用 Registry ,原型如下所示。
-
 ```cpp
 #include <iostream>
 #include "rpc/rpc.hpp"

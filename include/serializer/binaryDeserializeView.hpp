@@ -25,7 +25,7 @@
 namespace muse::serializer{
     class IBinarySerializable; //define
 
-    class BinaryDeserializeView {
+    class MUSE_Serializer_API BinaryDeserializeView {
     public:
         using Position_Type = long;
         using Element_Length = uint32_t ;
@@ -58,6 +58,8 @@ namespace muse::serializer{
         BinaryDeserializeView(const char* _byteStream, size_t _byteStreamSize);       //默认构造函数
         BinaryDeserializeView(const BinaryDeserializeView& other) = delete;   //禁止复制
         BinaryDeserializeView(BinaryDeserializeView &&other) noexcept;        //支持移动操作
+        BinaryDeserializeView& operator=(const BinaryDeserializeView& other) = delete;
+        BinaryDeserializeView& operator=(BinaryDeserializeView &&other) noexcept;
         [[nodiscard]] const char* getBinaryStream() const;                          //返回二进制流的指针
 
         void saveToFile(const std::string& path) const;    //二进制数据存储到文件中

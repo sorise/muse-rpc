@@ -35,7 +35,7 @@ static_assert(__cplusplus >= 201103L, "C++ version is not right" );
 namespace muse::serializer{
     class IBinarySerializable; //define
 
-    class BinarySerializer final{
+    class MUSE_Serializer_API BinarySerializer final{
     public:
         using Position_Type = long;
         using Element_Length = uint32_t ;
@@ -93,8 +93,9 @@ namespace muse::serializer{
         BinarySerializer();                                         //默认构造函数
         BinarySerializer(const BinarySerializer& other) = delete;   //禁止复制
         BinarySerializer(BinarySerializer &&other) noexcept;        //支持移动操作
+        BinarySerializer& operator=(const BinarySerializer& other) = delete;
+        BinarySerializer& operator=(BinarySerializer&& other) noexcept;
         [[nodiscard]] const char* getBinaryStream() const;                        //返回二进制流的指针
-
         void saveToFile(const std::string& path) const;    //二进制数据存储到文件中
         void loadFromFile(const std::string& path);  //从文件中加载二进制数据
 

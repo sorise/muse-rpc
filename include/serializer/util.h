@@ -11,6 +11,16 @@
 #include <exception>
 #include <tuple>
 
+#ifndef _WIN32
+    #define MUSE_Serializer_API
+#else
+    #ifdef serializer_EXPORTS
+        #define MUSE_Serializer_API __declspec(dllexport)   //库项目调用
+    #else
+        #define MUSE_Serializer_API __declspec(dllimport)  //调用库库项目调用
+    #endif
+#endif
+
 namespace muse::serializer{
     //初始化容量大小
     #define MUSE_DEFAULT_CAPACITY 32
@@ -97,7 +107,7 @@ namespace muse::serializer{
     };
 
     /* 获取当前主机采用的字节序 */
-     ByteSequence getByteSequence();
+    MUSE_Serializer_API ByteSequence getByteSequence();
 
     //获取元组长度 01
     template<typename T>
@@ -112,7 +122,7 @@ namespace muse::serializer{
     }
 
     /* 错误异常消息 */
-    class BinarySerializerException: public std::logic_error{
+    class MUSE_Serializer_API BinarySerializerException: public std::logic_error{
     public:
         explicit BinarySerializerException(const std::string &arg, ErrorNumber err);
         ~BinarySerializerException() override ;

@@ -522,4 +522,14 @@ namespace muse::serializer{
             throw std::logic_error("the file path is not right!");
         }
     }
+
+    BinarySerializer &BinarySerializer::operator=(BinarySerializer &&other) noexcept {
+        if (this != &other){
+            byteStream = std::move(other.byteStream);
+            readPosition = other.readPosition;
+            other.readPosition = 0;
+            other.byteStream.clear();
+        }
+        return *this;
+    }
 }

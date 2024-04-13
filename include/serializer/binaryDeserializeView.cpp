@@ -336,5 +336,17 @@ namespace muse::serializer{
         readPosition = 0;
     }
 
+    BinaryDeserializeView &BinaryDeserializeView::operator=(BinaryDeserializeView &&other) noexcept {
+        if (this != &other){
+            byteStream = other.byteStream;
+            byteStreamSize = other.byteStreamSize;
+            readPosition = other.readPosition;
+            other.byteStream = nullptr;
+            other.byteStreamSize = 0;
+            other.readPosition = 0;
+        }
+        return *this;
+    }
+
 
 }

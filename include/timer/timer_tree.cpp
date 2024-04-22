@@ -52,6 +52,7 @@ namespace muse::timer{
         return diff > 0? diff:0;
     }
 
+
     bool TimerTree::runTask(){
         if (!nodes.empty()){
             //迭代器，但是加锁了
@@ -66,4 +67,17 @@ namespace muse::timer{
         return false;
     }
 
+    void TimerTree::runTaskLoop() {
+        auto current = TimerTree::GetTick();
+        auto start = nodes.begin();
+        while (start != nodes.end()){
+            time_t diff = start->getExpire() - current;
+            if (diff <= 0){
+                start->callBack();
+                start = nodes.erase(start);
+            }else{
+                break;
+            }
+        }
+    }
 }

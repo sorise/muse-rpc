@@ -12,6 +12,7 @@
 #include <mutex>
 #include <set>
 #include <utility>
+#include "thread_pool/conf.h"
 
 /* 基于红黑树的非线程安全的毫秒级定时器 */
 namespace muse::timer{
@@ -56,7 +57,7 @@ namespace muse::timer{
 
         //添加到树上  
         template<class F, class ...Args >
-        TimeNodeBase setTimeout(long long milliseconds, F && f, Args&... args){
+        TimeNodeBase setTimeout(long long milliseconds, F && f, Args&&... args){
             TimeNode::CallBack callBack = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
             TimeNode tNode(GenTimeTaskID() ,callBack, GetTick() + milliseconds);
             nodes.insert(tNode);
@@ -89,6 +90,8 @@ namespace muse::timer{
 
         /* 执行任务 */
         bool runTask();
+
+        void runTaskLoop();
     };
 }
 

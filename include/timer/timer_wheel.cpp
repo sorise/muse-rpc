@@ -3,7 +3,6 @@
 //
 #include "timer_wheel.hpp"
 namespace muse::timer{
-
     TimerWheelTask::TimerWheelTask(CallBack cb, std::chrono::milliseconds exp):
     ID(0),
     expire(exp),

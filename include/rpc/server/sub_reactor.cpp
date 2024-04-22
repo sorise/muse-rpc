@@ -23,8 +23,8 @@ namespace muse::rpc{
     }
 
     SubReactor::SubReactor(uint16_t _port ,int _open_max_connection, std::shared_ptr<std::pmr::synchronized_pool_resource> _pool):
-    openMaxConnection(_open_max_connection),
     port(_port),
+    openMaxConnection(_open_max_connection),
     epollFd(-1),
     pool(std::move(_pool)),
     runner(nullptr){
@@ -77,7 +77,7 @@ namespace muse::rpc{
             {
                 //处理发送任务
                 std::lock_guard<std::mutex> lock(treeTimer_mtx);
-                treeTimer.runTask();
+                treeTimer.runTaskLoop();
             }
             //处理新的链接
             dealWithNewConnection();

@@ -37,9 +37,9 @@ namespace muse::timer{
     public:
         uint64_t ID; //标识ID
         TimerWheelTask(CallBack cb, std::chrono::milliseconds exp);
-        std::chrono::milliseconds getExpire() const;
+        [[nodiscard]] std::chrono::milliseconds getExpire() const;
         void cancel();
-        bool getCancelState() const;
+        [[nodiscard]] bool getCancelState() const;
     };
 
     class TimerWheel{

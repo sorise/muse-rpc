@@ -174,7 +174,7 @@ namespace muse::rpc{
             //处理定时器时间
             {
                 std::lock_guard<std::mutex> lock(timer_mtx);
-                timer.runTask();
+                timer.runTaskLoop();
             }
         }
     }

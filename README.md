@@ -229,6 +229,7 @@ enum class RpcFailureReason:int{
 **注意**： 单个Transmitter同时发送的任务数量应该在100以下，如果发送的请求任务超过100，需要增加超时时间，可以调用如下接口设置操作时间
 * void MiddlewareChannel::set_request_timeout(const uint32_t& _timeout); 设置请求阶段的等待超时时间，timeout是毫秒数，默认值是1000毫秒。
 * void MiddlewareChannel::set_response_timeout(const uint32_t& _timeout); 设置响应阶段的等待超时时间，默认值是900毫秒。
+
 ```cpp
 void test_v(){
     //启动客户端配置
@@ -289,12 +290,11 @@ ThreadPoolSetting::DynamicThreadVacantMillisecond = 3000ms; //动态线程空闲
 ### [2. 网络协议：Simple Request-Response Protocol](#)
 **介绍**：简单请求响应协议（SR2P 协议），是一种两阶段协议，专门为 RPC 定制，分为请求和响应两个阶段不需要建立链接。
 
-协议字段如下所示，协议头是26字节，字段字节序采用大端序，数据部分是小端序，由于MTU的限制，网络标准MTU为576，数据部分最大为522字节，更多请看 [Protocol.md](./docs/Protocol.md)。
+协议字段如下所示，协议头是26字节，字段字节序采用大端序，数据部分是小端序，由于MTU的限制，网络标准MTU为576，数据部分最大为522字节，更多请看 [Protocol.pdf](./docs/assets/normal_simple.pdf)。
 
-<img src="./docs/assets/protocol.jpg" width="1000px" >
+<img src="./docs/assets/xieyisp.png" width="800px" >
 
 * **synchronousWord**    同步字 , 值为`11110000`，一个字节。
-* **type** 协议类型
 * **CommunicationPhase**  协议阶段，4位
   * Request 阶段 0
   * Response 阶段 1
@@ -316,12 +316,11 @@ ThreadPoolSetting::DynamicThreadVacantMillisecond = 3000ms; //动态线程空闲
 * **totalSize**  完整报文的大小   4个字节
 * **acceptOrder** 确认序号  2个字节
 
-
 SR2P协议会根据发生数据的多少决定每次发生几个数据报，下面以一次2个为例，在基本正常情况下的请求流程图：
 
-<img src="./docs/assets/xiyio.jpg" width="500px" >
+<img src="./docs/assets/normal_flow.jpg" width="500px" >
 
-其他情况的处理过程详细请查看 [Protocol.md](./docs/Protocol.md) 文档
+其他情况的处理过程详细请查看 [Protocol.pdf](./docs/assets/normal_simple.pdf) 文档
 
 ### [3. 其他使用技巧](#)
 
